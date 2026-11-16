@@ -54,3 +54,20 @@
 3. `ticket-workflow-service` calls `ai-triage-service` (`POST /api/ai/analyze`) via OpenFeign.
 4. `ticket-workflow-service` calls `auth-team-service` (`GET /api/users/agents/least-loaded`) via OpenFeign.
 5. Ticket is saved in PostgreSQL; if `priority == CRITICAL`, an event is published to `resolveai.exchange` (RabbitMQ).
+
+## 4. Security & JWT Handling
+
+1. `api-gateway` only routes requests and applies CORS (`http://localhost:3000`). It does **not** validate JWTs; it forwards the `Authorization` header untouched.
+2. Every downstream service validates the JWT itself (HS256) using a shared `JWT_SECRET` environment variable (minimum 32 bytes).
+3. JWT claims: `sub` (userId), `email`, `role`, `fullName`, `iat`, `exp` (default 24 hours via `JWT_EXPIRATION_MS`).
+4. Service-to-service OpenFeign calls forward the caller's `Authorization` header (a Feign request interceptor is added in `ticket-workflow-service`).
+5. Public endpoints: `POST /api/auth/register`, `POST /api/auth/login`, Swagger UI, `/v3/api-docs/**`, `/actuator/health`.
+
+## 5. Gateway Routing Table
+
+| Path pattern                    | Target service (Eureka)    |
+| :------------------------------ | :------------------------- |
+| `/api/auth/**`, `/api/users/**` | `auth-team-service`        |
+| `/api/tickets/**`               | `ticket-workflow-service`  |
+| `/api/ai/**`                    | `ai-triage-service`        |
+| `/api/notifications/**`         | `notification-sla-service` |
