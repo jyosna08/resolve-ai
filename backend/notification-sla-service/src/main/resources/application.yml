@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: notification-sla-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/notification_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        default-requeue-rejected: false
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+server:
+  port: 8084
+app:
+  jwt:
+    secret: ${JWT_SECRET:resolveai-local-development-secret-change-before-prod-2026}
+  rabbitmq:
+    enabled: ${RABBITMQ_ENABLED:false}
+  sla:
+    scheduler-enabled: ${SLA_SCHEDULER_ENABLED:true}
+    check-interval-ms: ${SLA_CHECK_INTERVAL_MS:60000}
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+management:
+  health:
+    rabbit:
+      enabled: ${RABBITMQ_ENABLED:false}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
