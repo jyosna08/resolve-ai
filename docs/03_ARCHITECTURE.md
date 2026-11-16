@@ -71,3 +71,12 @@
 | `/api/tickets/**`               | `ticket-workflow-service`  |
 | `/api/ai/**`                    | `ai-triage-service`        |
 | `/api/notifications/**`         | `notification-sla-service` |
+
+## 6. Critical Event Delivery
+
+| `RABBITMQ_ENABLED` | Path used by `ticket-workflow-service`                                                           | Consumer in `notification-sla-service`     |
+| :----------------- | :----------------------------------------------------------------------------------------------- | :----------------------------------------- |
+| `true`             | RabbitMQ (`resolveai.exchange`, key `ticket.critical`), REST/Feign fallback if the publish fails | `ticket.critical.queue` listener enabled   |
+| `false` (default)  | REST/Feign `POST /api/notifications/events/critical` only                                        | Listener not created, no broker connection |
+
+Both services declare the same durable exchange, queue and binding, so message order of startup does not matter. Duplicate deliveries are ignored per `ticketId`.
