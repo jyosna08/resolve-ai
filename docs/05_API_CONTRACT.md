@@ -206,5 +206,55 @@ All endpoints are routed through `api-gateway` (`http://localhost:8080`). Protec
 
 ### GET `/api/notifications/alerts`
 
+- **Auth:** Authenticated (`AGENT`, `ADMIN`; `CUSTOMER` gets `403`)
+- **Description:** Returns active (not acknowledged) alerts, newest first.
+- **Success Response (`200 OK`):**
+
+```json
+[
+  {
+    "id": 1,
+    "ticketId": 101,
+    "ticketTitle": "Payment Gateway Failure",
+    "alertType": "CRITICAL_ESCALATION",
+    "message": "CRITICAL ticket #101 'Payment Gateway Failure' assigned to Priya Sharma. SLA deadline: 2026-11-17T09:30:00.",
+    "acknowledged": false,
+    "slaDeadline": "2026-11-17T09:30:00",
+    "createdAt": "2026-11-16T09:30:00"
+  }
+]
+```
+
+### PATCH `/api/notifications/alerts/{id}/acknowledge`
+
 - **Auth:** Authenticated (`AGENT`, `ADMIN`)
-- **Success Response (`200 OK`):** List of active critical & SLA breach alert DTOs.
+- **Success Response (`200 OK`):** Updated alert DTO. **Error Responses:** `401`, `403`, `404`.
+
+### POST `/api/notifications/events/critical` (REST fallback)
+
+- **Auth:** Authenticated (any valid JWT; the ticket service forwards the caller's token). Used by `ticket-workflow-service` when `RABBITMQ_ENABLED=false` or RabbitMQ publishing fails.
+- **Request Body:**
+
+```json
+{
+  "ticketId": 101,
+  "title": "Payment Gateway Failure",
+  "priority": "CRITICAL",
+  "assignedAgentName": "Priya Sharma",
+  "slaDeadline": "2026-11-17T09:30:00"
+}
+```
+
+- **Validation:** `ticketId` (NotNull), `title` (NotBlank, max 200), `slaDeadline` (NotNull). `priority` and `assignedAgentName` are optional.
+- **Success Response:** `201 Created` with the alert DTO; `200 OK` with the existing alert if a `CRITICAL_ESCALATION` alert for the same `ticketId` already exists (idempotent). **Error Responses:** `400`, `401`.
+- **Note (MVP):** any authenticated user can call this endpoint. Replace with an internal service key before production.
+
+### RabbitMQ Contract
+
+- Exchange `resolveai.exchange` (direct, durable), routing key `ticket.critical`, queue `ticket.critical.queue` (durable).
+- Message: the same JSON as the REST fallback request body. The consumer is enabled only when `RABBITMQ_ENABLED=true`. Duplicate messages are ignored (idempotent per `ticketId`).
+
+### SLA Breach Detection
+
+- A scheduler runs every 60 seconds. For every `CRITICAL_ESCALATION` alert that is **not acknowledged** and whose `slaDeadline` has passed, it creates one `SLA_BREACH` alert (at most one per ticket).
+- Acknowledging an alert means an agent has handled it and stops breach alerts for that ticket.

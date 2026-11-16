@@ -67,7 +67,9 @@ CREATE TABLE sla_alerts (
     ticket_title VARCHAR(200) NOT NULL,
     alert_type VARCHAR(30) NOT NULL CHECK (alert_type IN ('CRITICAL_ESCALATION', 'SLA_BREACH')),
     message TEXT NOT NULL,
+    sla_deadline TIMESTAMP,
     is_acknowledged BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_alert_ticket_type UNIQUE (ticket_id, alert_type)
 );
 ```
