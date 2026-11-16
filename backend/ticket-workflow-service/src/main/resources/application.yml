@@ -16,6 +16,15 @@ spring:
           default:
             connectTimeout: 3000
             readTimeout: 20000
+          notification-sla-service:
+            connectTimeout: 2000
+            readTimeout: 5000
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    connection-timeout: 3000
 eureka:
   client:
     service-url:
@@ -23,6 +32,8 @@ eureka:
 server:
   port: 8082
 app:
+  rabbitmq:
+    enabled: ${RABBITMQ_ENABLED:false}
   jwt:
     secret: ${JWT_SECRET:resolveai-local-development-secret-change-before-prod-2026}
   sla:
@@ -32,6 +43,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 management:
+  health:
+    rabbit:
+      enabled: ${RABBITMQ_ENABLED:false}
   endpoints:
     web:
       exposure:

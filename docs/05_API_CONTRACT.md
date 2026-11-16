@@ -175,7 +175,7 @@ All endpoints are routed through `api-gateway` (`http://localhost:8080`). Protec
 - **Search:** case-insensitive match on title or description. Filters `status`, `priority`, `search` are optional and combinable. An invalid status/priority value returns `400`.
 - **Dashboard stats:** `totalOpen` = status not `RESOLVED`; `criticalAlerts` = open tickets with `CRITICAL` priority; `resolvedToday` = `RESOLVED` tickets updated today; `slaWarnings` = open tickets whose SLA deadline is within the next 2 hours or already passed.
 - **Roles:** `PATCH /status` and `POST /verify-reply` require `AGENT` or `ADMIN` (`403` for `CUSTOMER`).
-- **Critical tickets:** a `CRITICAL` ticket publishes an event through a publisher interface. In this release it only logs; RabbitMQ + REST fallback is added with the notification service.
+- **Critical tickets:** after the ticket is saved, a `CRITICAL` ticket triggers a `CriticalTicketEvent` (`ticketId`, `title`, `priority`, `assignedAgentName`, `slaDeadline`). If `RABBITMQ_ENABLED=true` the event is published to exchange `resolveai.exchange` with routing key `ticket.critical`; if that publish fails, the service falls back to `POST /api/notifications/events/critical` through OpenFeign. If `RABBITMQ_ENABLED=false` the REST call is used directly. A delivery failure is logged and **never** fails ticket creation. The notification service ignores duplicates per `ticketId`, so a retry through both paths is safe.
 
 ---
 
