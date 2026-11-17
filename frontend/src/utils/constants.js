@@ -16,3 +16,14 @@ export const REPLY_MAX_LENGTH = 2000
 export const SLA_WARNING_MINUTES = 120
 export const MAX_RESOLVED_VISIBLE = 20
 export const PRIORITY_RANK = Object.freeze({ [PRIORITY.CRITICAL]: 0, [PRIORITY.HIGH]: 1, [PRIORITY.MEDIUM]: 2, [PRIORITY.LOW]: 3 })
+export const ALERT_TYPE = Object.freeze({ CRITICAL_ESCALATION: 'CRITICAL_ESCALATION', SLA_BREACH: 'SLA_BREACH' })
+export const TICKET_TITLE_MIN = 5
+export const TICKET_TITLE_MAX = 200
+export const TICKET_DESCRIPTION_MIN = 10
+export const TICKET_DESCRIPTION_MAX = 2000
+export const CUSTOMER_STATUS_TABS = Object.freeze([
+  { key: 'ALL', label: 'All', status: null },
+  { key: TICKET_STATUS.TO_DO, label: 'To Do', status: TICKET_STATUS.TO_DO },
+  { key: TICKET_STATUS.IN_PROGRESS, label: 'In Progress', status: TICKET_STATUS.IN_PROGRESS },
+  { key: TICKET_STATUS.RESOLVED, label: 'Resolved', status: TICKET_STATUS.RESOLVED },
+])

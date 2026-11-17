@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import ErrorBanner from '@/components/common/ErrorBanner.jsx'
 import AiCoPilotDrawer from '@/components/copilot/AiCoPilotDrawer.jsx'
 import KanbanBoard from '@/components/dashboard/KanbanBoard.jsx'
@@ -10,8 +10,9 @@ import usePolling from '@/hooks/usePolling.js'
 import useTickets from '@/hooks/useTickets.js'
 
 export default function DashboardPage() {
-  const { search, openSubmitIssue } = useOutletContext()
-  const { tickets, isLoading: ticketsLoading, error: ticketsError, refresh: refreshTickets, replaceTicket } = useTickets(search)
+  const { search, openSubmitIssue, ticketsVersion = 0 } = useOutletContext()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { tickets, isLoading: ticketsLoading, error: ticketsError, refresh: refreshTickets, replaceTicket } = useTickets(search, ticketsVersion)
   const { stats, isLoading: statsLoading, error: statsError, refresh: refreshStats } = useDashboardStats()
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [errorDismissed, setErrorDismissed] = useState(false)
@@ -25,6 +26,16 @@ export default function DashboardPage() {
       return tickets.find((ticket) => ticket.id === selected.id) || selected
     })
   }, [tickets])
+  useEffect(() => {
+    const ticketId = searchParams.get('ticket')
+    if (!ticketId || ticketsLoading) return
+    const ticket = tickets.find((item) => String(item.id) === ticketId)
+    if (!ticket) return
+    setSelectedTicket(ticket)
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('ticket')
+    setSearchParams(nextParams, { replace: true })
+  }, [tickets, ticketsLoading, searchParams, setSearchParams])
   useEffect(() => { setErrorDismissed(false) }, [ticketsError, statsError])
 
   const handleTicketUpdated = useCallback((updatedTicket) => {

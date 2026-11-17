@@ -25,3 +25,8 @@ export async function verifyReply(id, replyMessage) {
   const response = await axiosClient.post(`/api/tickets/${id}/verify-reply`, { replyMessage })
   return response.data
 }
+
+export async function createTicket({ title, description }) {
+  const response = await axiosClient.post('/api/tickets', { title, description })
+  return response.data
+}

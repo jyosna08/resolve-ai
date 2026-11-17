@@ -82,3 +82,11 @@ Rules: one component per file; pages only compose components; components never c
 - The AI summary from the API is a single string and is rendered as one bullet.
 - Board search is server-side (`?search=`) with a 400 ms debounce. KPI cards and the board refresh every 30 seconds and after every action.
 - The `CUSTOMER` role never calls `/api/notifications/**` (it returns 403 for them).
+
+
+## 9. Customer Portal, Submit Issue & Alerts (Behaviour)
+
+- **Submit Issue** (navbar button for every role, and "+ Add Ticket" on the board): modal with `title` (5–200) and `description` (10–2000), live character counters. Submission can take up to ~20 seconds because of AI triage, so the button shows "Analyzing with AI…" and the modal cannot be closed while submitting. On success the modal closes, a dismissible notice shows the new ticket id, AI priority and category, and the current page refreshes.
+- **My Tickets (`/my-tickets`, CUSTOMER):** the customer's own tickets, newest first, with status tabs (All / To Do / In Progress / Resolved), a loading skeleton, an error banner with retry, an empty state ("Submit your first issue") and a 30-second refresh. Opening a ticket shows title, description, status, created time and the agent replies (comments). **AI summary, AI draft, sentiment and SLA data are never shown to customers.**
+- **Notification bell (AGENT, ADMIN only):** badge = number of active (unacknowledged) alerts from `GET /api/notifications/alerts`, refreshed every 30 seconds. The dropdown lists each alert (type `CRITICAL_ESCALATION` or `SLA_BREACH`, ticket title, message, time) with **Acknowledge** and **View ticket**. Acknowledge removes the alert immediately (rolled back if the API call fails). **View ticket** opens `/dashboard?ticket=<id>`, which opens that ticket's drawer and then clears the parameter.
+- Customers never call `/api/notifications/**`.

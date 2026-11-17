@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '@/context/AuthContext.jsx'
 import { clearSession, saveSession } from '@/utils/authStorage.js'
@@ -17,11 +17,12 @@ const stats = { totalOpen: 8, criticalAlerts: 2, resolvedToday: 4, slaWarnings: 
 
 function DashboardHarness() {
   const [search, setSearch] = useState('')
-  return <><label>Harness search<input aria-label="Harness search" value={search} onChange={(event) => setSearch(event.target.value)} /></label><Outlet context={{ search, setSearch, openSubmitIssue: vi.fn() }} /></>
+  const location = useLocation()
+  return <><label>Harness search<input aria-label="Harness search" value={search} onChange={(event) => setSearch(event.target.value)} /></label><output data-testid="current-url">{location.pathname}{location.search}</output><Outlet context={{ search, setSearch, openSubmitIssue: vi.fn() }} /></>
 }
 
-function renderPage() {
-  return render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AuthProvider><Routes><Route element={<DashboardHarness />}><Route path="*" element={<DashboardPage />} /></Route></Routes></AuthProvider></MemoryRouter>)
+function renderPage(initialEntries = ['/']) {
+  return render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={initialEntries}><AuthProvider><Routes><Route element={<DashboardHarness />}><Route path="*" element={<DashboardPage />} /></Route></Routes></AuthProvider></MemoryRouter>)
 }
 
 function setAgentSession() {
@@ -95,5 +96,19 @@ describe('DashboardPage', () => {
     await act(async () => { vi.advanceTimersByTime(30000); await Promise.resolve(); await Promise.resolve() })
     expect(getTickets).toHaveBeenCalledTimes(2)
     expect(getDashboardStats).toHaveBeenCalledTimes(2)
+  })
+
+  it('opens and clears a valid ticket deep link after the ticket list loads', async () => {
+    renderPage(['/dashboard?ticket=101'])
+    expect(await screen.findByRole('dialog', { name: 'AI Co-Pilot Triage' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('current-url')).toHaveTextContent(/^\/dashboard$/))
+    expect(within(screen.getByRole('dialog', { name: 'AI Co-Pilot Triage' })).getByRole('heading', { name: 'Gateway returns payment errors' })).toBeInTheDocument()
+  })
+
+  it('silently ignores an unknown ticket deep link', async () => {
+    renderPage(['/dashboard?ticket=999'])
+    expect(await screen.findByRole('button', { name: /Gateway returns payment errors/ })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByTestId('current-url')).toHaveTextContent('/dashboard?ticket=999')
   })
 })
