@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEPARTMENTS, ROLES } from './constants.js'
-import { validateLogin, validateRegister } from './validators.js'
+import { validateLogin, validateRegister, validateReply } from './validators.js'
 
 const validLogin = { email: 'user@example.com', password: 'Password1' }
 const validRegister = { fullName: 'Resolve User', ...validLogin, role: ROLES.CUSTOMER, department: '' }
@@ -21,5 +21,11 @@ describe('validators', () => {
     expect(validateRegister({ ...validRegister, role: ROLES.AGENT })).toHaveProperty('department')
     expect(validateRegister({ ...validRegister, role: ROLES.AGENT, department: DEPARTMENTS.TECHNICAL })).not.toHaveProperty('department')
     expect(validateRegister(validRegister)).not.toHaveProperty('department')
+  })
+  it('validates trimmed reply length', () => {
+    expect(validateReply('   ')).toContain('at least')
+    expect(validateReply('four')).toContain('at least')
+    expect(validateReply('  valid reply  ')).toBe('')
+    expect(validateReply('x'.repeat(2001))).toContain('2000')
   })
 })
