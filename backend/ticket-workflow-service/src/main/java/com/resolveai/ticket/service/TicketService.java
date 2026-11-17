@@ -8,7 +8,7 @@ public interface TicketService {
  List<TicketResponse> listTickets(TicketStatus status,Priority priority,String search,AuthenticatedUser user);
  TicketResponse getTicket(Long id,AuthenticatedUser user);
  List<CommentResponse> getComments(Long id,AuthenticatedUser user);
- TicketResponse updateStatus(Long id,TicketStatus status);
+ TicketResponse updateStatus(Long id,TicketStatus status,AuthenticatedUser user);
  TicketResponse verifyReply(Long id,VerifyReplyRequest request,AuthenticatedUser user);
  DashboardStatsResponse dashboardStats(AuthenticatedUser user);
 }

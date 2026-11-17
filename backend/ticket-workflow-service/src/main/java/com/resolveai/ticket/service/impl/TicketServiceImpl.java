@@ -5,6 +5,7 @@ import com.resolveai.ticket.dto.*;
 import com.resolveai.ticket.entity.Ticket;
 import com.resolveai.ticket.enums.*;
 import com.resolveai.ticket.event.*;
+import com.resolveai.ticket.mapper.TicketMapper;
 import com.resolveai.ticket.security.AuthenticatedUser;
 import com.resolveai.ticket.service.*;
 import feign.FeignException;
@@ -22,13 +23,13 @@ public class TicketServiceImpl implements TicketService {
  @Override public TicketResponse createTicket(CreateTicketRequest request,AuthenticatedUser user){
   TriageResult triage=triage(request);Category category=parse(triage==null?null:triage.category(),Category.class,Category.GENERAL);
   Ticket ticket=newTicket(request,user,triage,category);AgentWorkload agent=findAgent(category);if(agent!=null){ticket.setAssignedAgentId(agent.id());ticket.setAssignedAgentName(agent.fullName());}
-  TicketResponse saved=persistence.create(ticket);incrementIfAssigned(saved.assignedAgentId());publishIfCritical(saved);return saved;
+  Ticket saved=persistence.create(ticket);incrementIfAssigned(saved.getAssignedAgentId());publishIfCritical(saved);return TicketMapper.toResponseFor(saved,user.role());
  }
- @Override public List<TicketResponse> listTickets(TicketStatus status,Priority priority,String search,AuthenticatedUser user){return persistence.list(status,priority,search,user);}
- @Override public TicketResponse getTicket(Long id,AuthenticatedUser user){return persistence.get(id,user);}
+ @Override public List<TicketResponse> listTickets(TicketStatus status,Priority priority,String search,AuthenticatedUser user){return persistence.list(status,priority,search,user).stream().map(ticket->TicketMapper.toResponseFor(ticket,user.role())).toList();}
+ @Override public TicketResponse getTicket(Long id,AuthenticatedUser user){return TicketMapper.toResponseFor(persistence.get(id,user),user.role());}
  @Override public List<CommentResponse> getComments(Long id,AuthenticatedUser user){return persistence.getComments(id,user);}
- @Override public TicketResponse updateStatus(Long id,TicketStatus status){TicketPersistenceService.Mutation result=persistence.updateStatus(id,status);decrementIfAssigned(result.decrementAgentId());return result.ticket();}
- @Override public TicketResponse verifyReply(Long id,VerifyReplyRequest request,AuthenticatedUser user){TicketPersistenceService.Mutation result=persistence.verifyReply(id,request,user);decrementIfAssigned(result.decrementAgentId());return result.ticket();}
+ @Override public TicketResponse updateStatus(Long id,TicketStatus status,AuthenticatedUser user){TicketPersistenceService.Mutation result=persistence.updateStatus(id,status);decrementIfAssigned(result.decrementAgentId());return TicketMapper.toResponseFor(result.ticket(),user.role());}
+ @Override public TicketResponse verifyReply(Long id,VerifyReplyRequest request,AuthenticatedUser user){TicketPersistenceService.Mutation result=persistence.verifyReply(id,request,user);decrementIfAssigned(result.decrementAgentId());return TicketMapper.toResponseFor(result.ticket(),user.role());}
  @Override public DashboardStatsResponse dashboardStats(AuthenticatedUser user){return persistence.stats(user,Math.toIntExact(sla.warningMinutes()));}
  private TriageResult triage(CreateTicketRequest request){try{return ai.analyze(new AnalyzeRequest(request.title(),request.description()));}catch(Exception ex){log.warn("AI triage unavailable; using defaults");return null;}}
  private Ticket newTicket(CreateTicketRequest request,AuthenticatedUser user,TriageResult result,Category category){
@@ -39,7 +40,7 @@ public class TicketServiceImpl implements TicketService {
  private AgentWorkload findAgent(Category category){try{AgentWorkload a=auth.leastLoaded(category.name());return a==null||a.id()==null?null:a;}catch(FeignException ex){log.warn("No agent available for category={} status={}",category,ex.status());return null;}catch(Exception ex){log.warn("Agent lookup failed for category={}",category);return null;}}
  private void incrementIfAssigned(Long id){if(id==null)return;try{auth.increment(id);}catch(Exception ex){log.warn("Could not increment assigned agent workload id={}",id);}}
  private void decrementIfAssigned(Long id){if(id==null)return;try{auth.decrement(id);}catch(Exception ex){log.warn("Could not decrement assigned agent workload id={}",id);}}
- private void publishIfCritical(TicketResponse ticket){if(ticket.priority()!=Priority.CRITICAL)return;try{publisher.publish(new CriticalTicketEvent(ticket.id(),ticket.title(),ticket.priority(),ticket.assignedAgentName(),ticket.slaDeadline()));}catch(Exception ex){log.warn("Could not publish critical ticket event id={}",ticket.id());}}
+ private void publishIfCritical(Ticket ticket){if(ticket.getPriority()!=Priority.CRITICAL)return;try{publisher.publish(new CriticalTicketEvent(ticket.getId(),ticket.getTitle(),ticket.getPriority(),ticket.getAssignedAgentName(),ticket.getSlaDeadline()));}catch(Exception ex){log.warn("Could not publish critical ticket event id={}",ticket.getId());}}
  private String textOr(String value,String fallback){return value==null||value.isBlank()?fallback:value;}
  private String truncate(String text,int size){return text.length()>size?text.substring(0,size):text;}
  private <E extends Enum<E>> E parse(String value,Class<E> type,E fallback){try{return Enum.valueOf(type,value.trim().toUpperCase(Locale.ROOT));}catch(Exception ex){return fallback;}}

@@ -24,7 +24,7 @@ public class TicketController {
  @GetMapping("/{id}") @Operation(summary="Get a ticket") public TicketResponse get(@PathVariable Long id,@AuthenticationPrincipal AuthenticatedUser user){return tickets.getTicket(id,user);}
  @GetMapping("/{id}/comments") @Operation(summary="List ticket comments") public List<CommentResponse> comments(@PathVariable Long id,@AuthenticationPrincipal AuthenticatedUser user){return tickets.getComments(id,user);}
  @PatchMapping("/{id}/status") @PreAuthorize("hasAnyRole('AGENT','ADMIN')") @Operation(summary="Update ticket status")
- public TicketResponse updateStatus(@PathVariable Long id,@Valid @RequestBody UpdateStatusRequest request){return tickets.updateStatus(id,request.status());}
+ public TicketResponse updateStatus(@PathVariable Long id,@Valid @RequestBody UpdateStatusRequest request,@AuthenticationPrincipal AuthenticatedUser user){return tickets.updateStatus(id,request.status(),user);}
  @PostMapping("/{id}/verify-reply") @PreAuthorize("hasAnyRole('AGENT','ADMIN')") @Operation(summary="Verify reply and resolve ticket")
  public TicketResponse verifyReply(@PathVariable Long id,@Valid @RequestBody VerifyReplyRequest request,@AuthenticationPrincipal AuthenticatedUser user){return tickets.verifyReply(id,request,user);}
 }
