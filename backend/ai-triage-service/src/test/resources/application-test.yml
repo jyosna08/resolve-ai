@@ -11,7 +11,7 @@ app:
 gemini:
   api-key: test-key
   base-url: https://generativelanguage.googleapis.com
-  model: gemini-2.5-flash
+  model: gemini-3.5-flash-lite
   connect-timeout-ms: 3000
   read-timeout-ms: 15000
-  max-output-tokens: 1024
+  max-output-tokens: 2048

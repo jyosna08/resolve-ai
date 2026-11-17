@@ -13,10 +13,10 @@ app:
 gemini:
   api-key: ${GEMINI_API_KEY:}
   base-url: https://generativelanguage.googleapis.com
-  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
   connect-timeout-ms: 3000
   read-timeout-ms: 15000
-  max-output-tokens: 1024
+  max-output-tokens: 2048
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
