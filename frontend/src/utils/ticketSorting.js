@@ -14,3 +14,7 @@ export function groupTicketsByStatus(tickets = []) {
   for (const status of Object.keys(groups)) groups[status] = sortTicketsForBoard(groups[status])
   return groups
 }
+
+export function sortTicketsNewestFirst(tickets = []) {
+  return [...tickets].sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())
+}

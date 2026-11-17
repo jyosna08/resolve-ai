@@ -4,7 +4,7 @@ import useDebounce from './useDebounce.js'
 import { SEARCH_DEBOUNCE_MS } from '@/utils/constants.js'
 import { getErrorMessage, isRequestCanceled } from '@/utils/errors.js'
 
-export default function useTickets(search = '') {
+export default function useTickets(search = '', refreshKey = 0) {
   const debouncedSearch = useDebounce(search, SEARCH_DEBOUNCE_MS)
   const [tickets, setTickets] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -33,7 +33,7 @@ export default function useTickets(search = '') {
         setIsLoading(false)
       })
     return () => controller.abort()
-  }, [debouncedSearch, requestVersion])
+  }, [debouncedSearch, requestVersion, refreshKey])
 
   const refresh = useCallback(() => setRequestVersion((version) => version + 1), [])
   const replaceTicket = useCallback((updatedTicket) => {

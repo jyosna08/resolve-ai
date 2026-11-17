@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axiosClient from './axiosClient.js'
-import { getDashboardStats, getTicketComments, getTickets, updateTicketStatus, verifyReply } from './ticketApi.js'
+import { createTicket, getDashboardStats, getTicketComments, getTickets, updateTicketStatus, verifyReply } from './ticketApi.js'
 
 describe('ticketApi', () => {
   const requests = []
@@ -23,5 +23,11 @@ describe('ticketApi', () => {
     expect(requests.map(({ url, method, data }) => [url, method, data])).toEqual([
       ['/api/tickets/dashboard-stats', 'get', undefined], ['/api/tickets/8/comments', 'get', undefined], ['/api/tickets/8/status', 'patch', JSON.stringify({ status: 'IN_PROGRESS' })], ['/api/tickets/8/verify-reply', 'post', JSON.stringify({ replyMessage: 'Reply text' })],
     ])
+  })
+  it('creates a ticket with the documented title and description body', async () => {
+    await createTicket({ title: 'An issue', description: 'Issue details are long enough.' })
+    expect(requests[0].url).toBe('/api/tickets')
+    expect(requests[0].method).toBe('post')
+    expect(requests[0].data).toBe(JSON.stringify({ title: 'An issue', description: 'Issue details are long enough.' }))
   })
 })

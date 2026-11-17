@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEPARTMENTS, ROLES } from './constants.js'
-import { validateLogin, validateRegister, validateReply } from './validators.js'
+import { validateLogin, validateRegister, validateReply, validateTicketForm } from './validators.js'
 
 const validLogin = { email: 'user@example.com', password: 'Password1' }
 const validRegister = { fullName: 'Resolve User', ...validLogin, role: ROLES.CUSTOMER, department: '' }
@@ -27,5 +27,13 @@ describe('validators', () => {
     expect(validateReply('four')).toContain('at least')
     expect(validateReply('  valid reply  ')).toBe('')
     expect(validateReply('x'.repeat(2001))).toContain('2000')
+  })
+  it('validates ticket title and description trimmed lengths against backend limits', () => {
+    expect(validateTicketForm({ title: ' A valid issue ', description: ' A sufficiently detailed description ' })).toEqual({})
+    expect(validateTicketForm({ title: 'tiny', description: 'A sufficiently detailed description' })).toHaveProperty('title')
+    expect(validateTicketForm({ title: 'x'.repeat(201), description: 'A sufficiently detailed description' })).toHaveProperty('title')
+    expect(validateTicketForm({ title: 'Valid title', description: 'short' })).toHaveProperty('description')
+    expect(validateTicketForm({ title: 'Valid title', description: 'x'.repeat(2001) })).toHaveProperty('description')
+    expect(validateTicketForm({ title: '   ', description: '   ' })).toEqual({ title: expect.any(String), description: expect.any(String) })
   })
 })

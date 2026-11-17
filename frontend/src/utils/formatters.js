@@ -8,6 +8,17 @@ export function formatDateTime(isoString) {
   return Number.isNaN(date.getTime()) ? '—' : dateTimeFormatter.format(date)
 }
 
+export function formatRelativeTime(isoString, now = Date.now()) {
+  if (!isoString) return '—'
+  const time = new Date(isoString).getTime()
+  if (Number.isNaN(time)) return '—'
+  const deltaSeconds = Math.round((time - now) / 1000)
+  const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]]
+  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+  for (const [unit, seconds] of units) if (Math.abs(deltaSeconds) >= seconds) return formatter.format(Math.round(deltaSeconds / seconds), unit)
+  return formatter.format(deltaSeconds, 'second')
+}
+
 function parseLocalDateTime(value) {
   if (typeof value !== 'string') return null
   const parsed = new Date(value)
