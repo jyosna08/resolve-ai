@@ -86,6 +86,10 @@ All endpoints are routed through `api-gateway` (`http://localhost:8080`). Protec
 }
 ```
 
+### Timestamps (all services)
+
+All date-time fields (`createdAt`, `slaDeadline`, `timestamp`, alert and comment times) are **UTC** and are serialized **without a zone suffix** (for example `2026-11-17T12:54:00`). Clients must interpret them as UTC and convert to the viewer's local time for display.
+
 ---
 
 ## 2. Ticket Workflow Service (`/api/tickets`)
