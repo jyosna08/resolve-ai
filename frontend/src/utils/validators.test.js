@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest'
+import { DEPARTMENTS, ROLES } from './constants.js'
+import { validateLogin, validateRegister, validateReply, validateTicketForm } from './validators.js'
+
+const validLogin = { email: 'user@example.com', password: 'Password1' }
+const validRegister = { fullName: 'Resolve User', ...validLogin, role: ROLES.CUSTOMER, department: '' }
+
+describe('validators', () => {
+  it('accepts valid login and registration', () => { expect(validateLogin(validLogin)).toEqual({}); expect(validateRegister(validRegister)).toEqual({}) })
+  it('requires fields', () => { expect(validateLogin({})).toHaveProperty('email'); expect(validateLogin({}).password).toBeTruthy(); expect(validateRegister({})).toHaveProperty('fullName') })
+  it('rejects malformed email and short or long password', () => {
+    expect(validateLogin({ ...validLogin, email: 'bad' })).toHaveProperty('email')
+    expect(validateLogin({ ...validLogin, password: 'short' })).toHaveProperty('password')
+    expect(validateLogin({ ...validLogin, password: 'x'.repeat(101) })).toHaveProperty('password')
+  })
+  it('rejects overlong name and unknown role', () => {
+    expect(validateRegister({ ...validRegister, fullName: 'x'.repeat(101) })).toHaveProperty('fullName')
+    expect(validateRegister({ ...validRegister, role: 'UNKNOWN' })).toHaveProperty('role')
+  })
+  it('requires department only for agents', () => {
+    expect(validateRegister({ ...validRegister, role: ROLES.AGENT })).toHaveProperty('department')
+    expect(validateRegister({ ...validRegister, role: ROLES.AGENT, department: DEPARTMENTS.TECHNICAL })).not.toHaveProperty('department')
+    expect(validateRegister(validRegister)).not.toHaveProperty('department')
+  })
+  it('validates trimmed reply length', () => {
+    expect(validateReply('   ')).toContain('at least')
+    expect(validateReply('four')).toContain('at least')
+    expect(validateReply('  valid reply  ')).toBe('')
+    expect(validateReply('x'.repeat(2001))).toContain('2000')
+  })
+  it('validates ticket title and description trimmed lengths against backend limits', () => {
+    expect(validateTicketForm({ title: ' A valid issue ', description: ' A sufficiently detailed description ' })).toEqual({})
+    expect(validateTicketForm({ title: 'tiny', description: 'A sufficiently detailed description' })).toHaveProperty('title')
+    expect(validateTicketForm({ title: 'x'.repeat(201), description: 'A sufficiently detailed description' })).toHaveProperty('title')
+    expect(validateTicketForm({ title: 'Valid title', description: 'short' })).toHaveProperty('description')
+    expect(validateTicketForm({ title: 'Valid title', description: 'x'.repeat(2001) })).toHaveProperty('description')
+    expect(validateTicketForm({ title: '   ', description: '   ' })).toEqual({ title: expect.any(String), description: expect.any(String) })
+  })
+})
