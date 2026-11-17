@@ -6,6 +6,7 @@ import Skeleton from '@/components/common/Skeleton.jsx'
 import SlideOver from '@/components/common/SlideOver.jsx'
 import useTicketComments from '@/hooks/useTicketComments.js'
 import { formatDateTime } from '@/utils/formatters.js'
+import { toEpochMs } from '@/utils/dateTime.js'
 import { CUSTOMER_STATUS_LABELS } from '@/utils/ticketDisplay.js'
 import { TICKET_STATUS } from '@/utils/constants.js'
 import CustomerStatusBadge from './CustomerStatusBadge.jsx'
@@ -14,7 +15,7 @@ import CustomerStatusBadge from './CustomerStatusBadge.jsx'
 export default function CustomerTicketDrawer({ ticket, isOpen, onClose }) {
   const ticketId = ticket?.id ?? null
   const { comments, isLoading, error, reload } = useTicketComments(ticketId)
-  const orderedComments = useMemo(() => [...comments].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)), [comments])
+  const orderedComments = useMemo(() => [...comments].sort((a, b) => (toEpochMs(a.createdAt) ?? 0) - (toEpochMs(b.createdAt) ?? 0)), [comments])
   if (!ticket) return null
   return <SlideOver isOpen={isOpen} onClose={onClose} title={ticket.title} ariaLabel={`Ticket ${ticket.id}: ${ticket.title}`}>
     <div className="flex min-h-full flex-col">
