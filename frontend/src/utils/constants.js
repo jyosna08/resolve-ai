@@ -1,0 +1,11 @@
+export const ROLES = Object.freeze({ CUSTOMER: 'CUSTOMER', AGENT: 'AGENT', ADMIN: 'ADMIN' })
+export const DEPARTMENTS = Object.freeze({ TECHNICAL: 'TECHNICAL', BILLING: 'BILLING', FRONTEND: 'FRONTEND', DEVOPS: 'DEVOPS', GENERAL: 'GENERAL' })
+export const TICKET_STATUS = Object.freeze({ TO_DO: 'TO_DO', IN_PROGRESS: 'IN_PROGRESS', RESOLVED: 'RESOLVED' })
+export const PRIORITY = Object.freeze({ CRITICAL: 'CRITICAL', HIGH: 'HIGH', MEDIUM: 'MEDIUM', LOW: 'LOW' })
+export const CATEGORY = Object.freeze({ ...DEPARTMENTS })
+export const SENTIMENT = Object.freeze({ FRUSTRATED: 'FRUSTRATED', NEUTRAL: 'NEUTRAL', POSITIVE: 'POSITIVE' })
+export const SESSION_STORAGE_KEY = 'resolveai.session'
+export const PASSWORD_MIN_LENGTH = 8
+export const PASSWORD_MAX_LENGTH = 100
+export const NAME_MAX_LENGTH = 100
+export const EMAIL_MAX_LENGTH = 150
