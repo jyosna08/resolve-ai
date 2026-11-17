@@ -1,4 +1,4 @@
-import { DEPARTMENTS, EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, ROLES } from './constants.js'
+import { DEPARTMENTS, EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, REPLY_MAX_LENGTH, REPLY_MIN_LENGTH, ROLES } from './constants.js'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const roleValues = Object.values(ROLES)
@@ -26,4 +26,11 @@ export function validateRegister({ fullName = '', email = '', password = '', rol
   if (!roleValues.includes(role)) errors.role = 'Choose a valid role.'
   if (role === ROLES.AGENT && !departmentValues.includes(department)) errors.department = 'Choose a department.'
   return errors
+}
+
+export function validateReply(message = '') {
+  const length = String(message).trim().length
+  if (length < REPLY_MIN_LENGTH) return `Reply must be at least ${REPLY_MIN_LENGTH} characters.`
+  if (length > REPLY_MAX_LENGTH) return `Reply must be ${REPLY_MAX_LENGTH} characters or fewer.`
+  return ''
 }
