@@ -16,21 +16,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class TicketPersistenceService implements TicketPersistencePort {
  private final TicketRepository tickets;private final TicketCommentRepository comments;
  public TicketPersistenceService(TicketRepository tickets,TicketCommentRepository comments){this.tickets=tickets;this.comments=comments;}
- @Override @Transactional public TicketResponse create(Ticket ticket){return TicketMapper.toResponse(tickets.save(ticket));}
- @Override @Transactional(readOnly=true) public List<TicketResponse> list(TicketStatus status,Priority priority,String search,AuthenticatedUser user){
+ @Override @Transactional public Ticket create(Ticket ticket){return tickets.save(ticket);}
+ @Override @Transactional(readOnly=true) public List<Ticket> list(TicketStatus status,Priority priority,String search,AuthenticatedUser user){
   Specification<Ticket> spec=scope(user).and(status(status)).and(priority(priority)).and(search(search));
-  return tickets.findAll(spec,Sort.by(Sort.Direction.DESC,"createdAt")).stream().map(TicketMapper::toResponse).toList();
+  return tickets.findAll(spec,Sort.by(Sort.Direction.DESC,"createdAt"));
  }
- @Override @Transactional(readOnly=true) public TicketResponse get(Long id,AuthenticatedUser user){return TicketMapper.toResponse(visible(id,user));}
+ @Override @Transactional(readOnly=true) public Ticket get(Long id,AuthenticatedUser user){return visible(id,user);}
  @Override @Transactional(readOnly=true) public List<CommentResponse> getComments(Long id,AuthenticatedUser user){visible(id,user);return comments.findAllByTicketIdOrderByCreatedAtAscIdAsc(id).stream().map(TicketMapper::toResponse).toList();}
  @Override @Transactional public Mutation updateStatus(Long id,TicketStatus status){
   Ticket ticket=required(id);TicketStatus old=ticket.getStatus();if(!allowed(old,status))throw new InvalidStatusTransitionException();ticket.setStatus(status);
-  Ticket saved=tickets.save(ticket);return new Mutation(TicketMapper.toResponse(saved),status==TicketStatus.RESOLVED?saved.getAssignedAgentId():null);
+  Ticket saved=tickets.save(ticket);return new Mutation(saved,status==TicketStatus.RESOLVED?saved.getAssignedAgentId():null);
  }
  @Override @Transactional public Mutation verifyReply(Long id,VerifyReplyRequest request,AuthenticatedUser user){
   Ticket ticket=required(id);if(ticket.getStatus()==TicketStatus.RESOLVED)throw new InvalidStatusTransitionException();
   TicketComment comment=new TicketComment();comment.setTicket(ticket);comment.setAuthorId(user.userId());comment.setAuthorName(user.fullName());comment.setMessage(request.replyMessage());comment.setAiVerified(true);comments.save(comment);
-  ticket.setStatus(TicketStatus.RESOLVED);Ticket saved=tickets.save(ticket);return new Mutation(TicketMapper.toResponse(saved),saved.getAssignedAgentId());
+  ticket.setStatus(TicketStatus.RESOLVED);Ticket saved=tickets.save(ticket);return new Mutation(saved,saved.getAssignedAgentId());
  }
  @Override @Transactional(readOnly=true) public DashboardStatsResponse stats(AuthenticatedUser user,int warningMinutes){
   LocalDateTime now=LocalDateTime.now();Specification<Ticket> scoped=scope(user);Specification<Ticket> open=scoped.and((r,q,b)->b.notEqual(r.get("status"),TicketStatus.RESOLVED));
@@ -46,5 +46,5 @@ public class TicketPersistenceService implements TicketPersistencePort {
  private Specification<Ticket> search(String value){if(value==null||value.isBlank())return null;String pattern="%"+value.trim().toLowerCase(Locale.ROOT)+"%";return(r,q,b)->b.or(b.like(b.lower(r.get("title")),pattern),b.like(b.lower(r.get("description")),pattern));}
  private boolean isCustomer(AuthenticatedUser user){return "CUSTOMER".equalsIgnoreCase(user.role());}
  private boolean allowed(TicketStatus from,TicketStatus to){return from==TicketStatus.TO_DO&&(to==TicketStatus.IN_PROGRESS||to==TicketStatus.RESOLVED)||from==TicketStatus.IN_PROGRESS&&(to==TicketStatus.TO_DO||to==TicketStatus.RESOLVED);}
- public record Mutation(TicketResponse ticket,Long decrementAgentId) { }
+ public record Mutation(Ticket ticket,Long decrementAgentId) { }
 }
