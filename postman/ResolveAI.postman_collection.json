@@ -151,9 +151,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes token\", () => { pm.expect(data).to.have.property('token');  });",
-                  "pm.test(\"Store adminToken\", () => { pm.expect(data.token).to.exist; pm.environment.set('adminToken', String(data.token)); pm.collectionVariables.set('adminToken', String(data.token)); });"
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store adminToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('adminToken', String(body.token)); pm.collectionVariables.set('adminToken', String(body.token)); });"
                 ]
               }
             }
@@ -192,10 +192,11 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Store agentId\", () => { pm.expect(data.id).to.exist; pm.environment.set('agentId', String(data.id)); pm.collectionVariables.set('agentId', String(data.id)); });",
-                  "pm.test(\"Created BILLING agent\", () => { pm.expect(data.role).to.eql('AGENT'); pm.expect(data.department).to.eql('BILLING'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"agentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store agentId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('agentId', String(body.id)); pm.collectionVariables.set('agentId', String(body.id)); });",
+                  "pm.test(\"Created BILLING agent\", () => { pm.expect(body.role).to.eql('AGENT'); pm.expect(body.department).to.eql('BILLING'); });"
                 ]
               }
             }
@@ -243,9 +244,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Created GENERAL agent\", () => { pm.expect(data.role).to.eql('AGENT'); pm.expect(data.department).to.eql('GENERAL'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"generalAgentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Created GENERAL agent\", () => { pm.expect(body.role).to.eql('AGENT'); pm.expect(body.department).to.eql('GENERAL'); });"
                 ]
               }
             }
@@ -280,10 +282,11 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Store customerId\", () => { pm.expect(data.id).to.exist; pm.environment.set('customerId', String(data.id)); pm.collectionVariables.set('customerId', String(data.id)); });",
-                  "pm.test(\"Customer role is assigned by server\", () => { pm.expect(data.role).to.eql('CUSTOMER'); pm.expect(data.department).to.eql('GENERAL'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store customerId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('customerId', String(body.id)); pm.collectionVariables.set('customerId', String(body.id)); });",
+                  "pm.test(\"Customer role is assigned by server\", () => { pm.expect(body.role).to.eql('CUSTOMER'); pm.expect(body.department).to.eql('GENERAL'); });"
                 ]
               }
             }
@@ -318,9 +321,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes token\", () => { pm.expect(data).to.have.property('token');  });",
-                  "pm.test(\"Store customerToken\", () => { pm.expect(data.token).to.exist; pm.environment.set('customerToken', String(data.token)); pm.collectionVariables.set('customerToken', String(data.token)); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store customerToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('customerToken', String(body.token)); pm.collectionVariables.set('customerToken', String(body.token)); });"
                 ]
               }
             }
@@ -355,9 +359,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes token\", () => { pm.expect(data).to.have.property('token');  });",
-                  "pm.test(\"Store agentToken\", () => { pm.expect(data.token).to.exist; pm.environment.set('agentToken', String(data.token)); pm.collectionVariables.set('agentToken', String(data.token)); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store agentToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('agentToken', String(body.token)); pm.collectionVariables.set('agentToken', String(body.token)); });"
                 ]
               }
             }
@@ -392,8 +397,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"otherCustomerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });"
                 ]
               }
             }
@@ -428,9 +434,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes token\", () => { pm.expect(data).to.have.property('token');  });",
-                  "pm.test(\"Store otherCustomerToken\", () => { pm.expect(data.token).to.exist; pm.environment.set('otherCustomerToken', String(data.token)); pm.collectionVariables.set('otherCustomerToken', String(data.token)); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"otherCustomerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store otherCustomerToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('otherCustomerToken', String(body.token)); pm.collectionVariables.set('otherCustomerToken', String(body.token)); });"
                 ]
               }
             }
@@ -479,9 +486,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes role\", () => { pm.expect(data).to.have.property('role');  });",
-                  "pm.test(\"Public registration returns CUSTOMER\", () => { pm.expect(data.role).to.eql('CUSTOMER'); pm.expect(data.department).to.eql('GENERAL'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"authCustomerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes role\", () => { pm.expect(body).to.have.property('role');  });",
+                  "pm.test(\"Public registration returns CUSTOMER\", () => { pm.expect(body.role).to.eql('CUSTOMER'); pm.expect(body.department).to.eql('GENERAL'); });"
                 ]
               }
             }
@@ -516,8 +524,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Error payload is present\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Error payload is present\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -561,8 +570,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Forbidden response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"forbiddenAGENTEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -606,8 +616,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Forbidden response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"forbiddenADMINEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -642,8 +653,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Validation error is present\", () => { pm.expect(data).to.be.an('object'); });"
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -678,8 +689,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes token\", () => { pm.expect(data).to.have.property('token');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });"
                 ]
               }
             }
@@ -714,8 +726,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Unauthorized response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Unauthorized response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -746,9 +759,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(data).to.have.property('activeTicketCount');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(body).to.have.property('activeTicketCount');  });"
                 ]
               }
             }
@@ -774,8 +788,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Validation error is present\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -796,8 +811,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Unauthorized response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Unauthorized response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -823,8 +838,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(data).to.have.property('activeTicketCount');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentId\",\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(body).to.have.property('activeTicketCount');  });"
                 ]
               }
             }
@@ -850,8 +866,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(data).to.have.property('activeTicketCount');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentId\",\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(body).to.have.property('activeTicketCount');  });"
                 ]
               }
             }
@@ -899,8 +916,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Forbidden response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\",\"forbiddenTeamEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -948,9 +966,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Created user has expected role\", () => { pm.expect(data.role).to.eql('AGENT'); pm.expect(data.department).to.eql('BILLING'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"adminCreatedAgentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Created user has expected role\", () => { pm.expect(body.role).to.eql('AGENT'); pm.expect(body.department).to.eql('BILLING'); });"
                 ]
               }
             }
@@ -989,8 +1008,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Conflict response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"agentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Conflict response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1043,12 +1063,13 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes category\", () => { pm.expect(data).to.have.property('category');  });",
-                  "pm.test(\"Response includes priority\", () => { pm.expect(data).to.have.property('priority');  });",
-                  "pm.test(\"Response includes sentiment\", () => { pm.expect(data).to.have.property('sentiment');  });",
-                  "pm.test(\"Response includes summary\", () => { pm.expect(data).to.have.property('summary');  });",
-                  "pm.test(\"Response includes draftReply\", () => { pm.expect(data).to.have.property('draftReply');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes category\", () => { pm.expect(body).to.have.property('category');  });",
+                  "pm.test(\"Response includes priority\", () => { pm.expect(body).to.have.property('priority');  });",
+                  "pm.test(\"Response includes sentiment\", () => { pm.expect(body).to.have.property('sentiment');  });",
+                  "pm.test(\"Response includes summary\", () => { pm.expect(body).to.have.property('summary');  });",
+                  "pm.test(\"Response includes draftReply\", () => { pm.expect(body).to.have.property('draftReply');  });"
                 ]
               }
             }
@@ -1083,8 +1104,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Unauthorized response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Unauthorized response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1123,8 +1144,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Validation error is present\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1168,20 +1190,21 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Store ticketId\", () => { pm.expect(data.id).to.exist; pm.environment.set('ticketId', String(data.id)); pm.collectionVariables.set('ticketId', String(data.id)); });",
-                  "pm.test(\"Response has expected status field\", () => { pm.expect(data).to.have.property('status'); });",
-                  "pm.test(\"aiSummary is redacted for customer\", () => { pm.expect(data).to.have.property('aiSummary', null); });",
-                  "pm.test(\"aiDraftReply is redacted for customer\", () => { pm.expect(data).to.have.property('aiDraftReply', null); });",
-                  "pm.test(\"sentiment is redacted for customer\", () => { pm.expect(data).to.have.property('sentiment', null); });",
-                  "pm.test(\"slaDeadline is redacted for customer\", () => { pm.expect(data).to.have.property('slaDeadline', null); });",
-                  "pm.test(\"assignedAgentId is redacted for customer\", () => { pm.expect(data).to.have.property('assignedAgentId', null); });",
-                  "pm.test(\"assignedAgentName is redacted for customer\", () => { pm.expect(data).to.have.property('assignedAgentName', null); });",
-                  "pm.test(\"Response includes priority\", () => { pm.expect(data).to.have.property('priority');  });",
-                  "pm.test(\"Response includes category\", () => { pm.expect(data).to.have.property('category');  });",
-                  "pm.test(\"Response includes title\", () => { pm.expect(data).to.have.property('title');  });",
-                  "pm.test(\"Response includes description\", () => { pm.expect(data).to.have.property('description');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store ticketId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('ticketId', String(body.id)); pm.collectionVariables.set('ticketId', String(body.id)); });",
+                  "pm.test(\"Response has expected status field\", () => { pm.expect(body).to.have.property('status'); });",
+                  "pm.test(\"aiSummary is redacted for customer\", () => { pm.expect(body).to.have.property('aiSummary', null); });",
+                  "pm.test(\"aiDraftReply is redacted for customer\", () => { pm.expect(body).to.have.property('aiDraftReply', null); });",
+                  "pm.test(\"sentiment is redacted for customer\", () => { pm.expect(body).to.have.property('sentiment', null); });",
+                  "pm.test(\"slaDeadline is redacted for customer\", () => { pm.expect(body).to.have.property('slaDeadline', null); });",
+                  "pm.test(\"assignedAgentId is redacted for customer\", () => { pm.expect(body).to.have.property('assignedAgentId', null); });",
+                  "pm.test(\"assignedAgentName is redacted for customer\", () => { pm.expect(body).to.have.property('assignedAgentName', null); });",
+                  "pm.test(\"Response includes priority\", () => { pm.expect(body).to.have.property('priority');  });",
+                  "pm.test(\"Response includes category\", () => { pm.expect(body).to.have.property('category');  });",
+                  "pm.test(\"Response includes title\", () => { pm.expect(body).to.have.property('title');  });",
+                  "pm.test(\"Response includes description\", () => { pm.expect(body).to.have.property('description');  });"
                 ]
               }
             }
@@ -1220,8 +1243,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Validation error is present\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1247,8 +1271,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response is an owned ticket with customer fields redacted\", () => { pm.expect(data).to.be.an('array'); const ticket = data.find((t) => t.id === Number(pm.environment.get('ticketId'))); pm.expect(ticket).to.exist; for (const field of ['aiSummary','aiDraftReply','sentiment','slaDeadline','assignedAgentId','assignedAgentName']) pm.expect(ticket).to.have.property(field, null); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response is an owned ticket with customer fields redacted\", () => { pm.expect(body).to.be.an('array'); const ticket = body.find((t) => t.id === Number(pm.environment.get('ticketId'))); pm.expect(ticket).to.exist; for (const field of ['aiSummary','aiDraftReply','sentiment','slaDeadline','assignedAgentId','assignedAgentName']) pm.expect(ticket).to.have.property(field, null); });"
                 ]
               }
             }
@@ -1274,8 +1299,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response is an array\", () => { pm.expect(data).to.be.an('array'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response is an array\", () => { pm.expect(body).to.be.an('array'); });"
                 ]
               }
             }
@@ -1301,8 +1327,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Full AI and assignment data is returned\", () => { pm.expect(data.aiSummary).to.be.a('string').and.not.empty; pm.expect(data.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(data.sentiment).to.be.a('string').and.not.empty; pm.expect(data.slaDeadline).to.be.a('string').and.not.empty; pm.expect(data.assignedAgentId).to.be.a('number'); pm.expect(data.assignedAgentName).to.be.a('string').and.not.empty; });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Full AI and assignment body is returned\", () => { pm.expect(body.aiSummary).to.be.a('string').and.not.empty; pm.expect(body.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(body.sentiment).to.be.a('string').and.not.empty; pm.expect(body.slaDeadline).to.be.a('string').and.not.empty; pm.expect(body.assignedAgentId).to.be.a('number'); pm.expect(body.assignedAgentName).to.be.a('string').and.not.empty; });"
                 ]
               }
             }
@@ -1328,8 +1355,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Not found response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"otherCustomerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Not found response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1355,11 +1383,12 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes totalOpen\", () => { pm.expect(data).to.have.property('totalOpen');  });",
-                  "pm.test(\"Response includes criticalAlerts\", () => { pm.expect(data).to.have.property('criticalAlerts');  });",
-                  "pm.test(\"Response includes resolvedToday\", () => { pm.expect(data).to.have.property('resolvedToday');  });",
-                  "pm.test(\"Response includes slaWarnings\", () => { pm.expect(data).to.have.property('slaWarnings');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes totalOpen\", () => { pm.expect(body).to.have.property('totalOpen');  });",
+                  "pm.test(\"Response includes criticalAlerts\", () => { pm.expect(body).to.have.property('criticalAlerts');  });",
+                  "pm.test(\"Response includes resolvedToday\", () => { pm.expect(body).to.have.property('resolvedToday');  });",
+                  "pm.test(\"Response includes slaWarnings\", () => { pm.expect(body).to.have.property('slaWarnings');  });"
                 ]
               }
             }
@@ -1398,9 +1427,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response has expected status field\", () => { pm.expect(data).to.have.property('status'); });",
-                  "pm.test(\"Full agent DTO is returned\", () => { pm.expect(data.aiSummary).to.be.a('string').and.not.empty; pm.expect(data.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(data.sentiment).to.be.a('string').and.not.empty; pm.expect(data.slaDeadline).to.be.a('string').and.not.empty; pm.expect(data.assignedAgentId).to.be.a('number'); pm.expect(data.assignedAgentName).to.be.a('string').and.not.empty; });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response has expected status field\", () => { pm.expect(body).to.have.property('status'); });",
+                  "pm.test(\"Full agent DTO is returned\", () => { pm.expect(body.aiSummary).to.be.a('string').and.not.empty; pm.expect(body.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(body.sentiment).to.be.a('string').and.not.empty; pm.expect(body.slaDeadline).to.be.a('string').and.not.empty; pm.expect(body.assignedAgentId).to.be.a('number'); pm.expect(body.assignedAgentName).to.be.a('string').and.not.empty; });"
                 ]
               }
             }
@@ -1439,8 +1469,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Forbidden response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1479,9 +1510,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response has expected status field\", () => { pm.expect(data).to.have.property('status'); });",
-                  "pm.test(\"Resolved response retains full agent DTO\", () => { pm.expect(data.status).to.eql('RESOLVED'); pm.expect(data.aiSummary).to.be.a('string').and.not.empty; pm.expect(data.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(data.sentiment).to.be.a('string').and.not.empty; pm.expect(data.slaDeadline).to.be.a('string').and.not.empty; pm.expect(data.assignedAgentId).to.be.a('number'); pm.expect(data.assignedAgentName).to.be.a('string').and.not.empty; });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response has expected status field\", () => { pm.expect(body).to.have.property('status'); });",
+                  "pm.test(\"Resolved response retains full agent DTO\", () => { pm.expect(body.status).to.eql('RESOLVED'); pm.expect(body.aiSummary).to.be.a('string').and.not.empty; pm.expect(body.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(body.sentiment).to.be.a('string').and.not.empty; pm.expect(body.slaDeadline).to.be.a('string').and.not.empty; pm.expect(body.assignedAgentId).to.be.a('number'); pm.expect(body.assignedAgentName).to.be.a('string').and.not.empty; });"
                 ]
               }
             }
@@ -1520,8 +1552,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Conflict response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Conflict response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1560,8 +1593,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Conflict response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Conflict response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1587,8 +1621,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Verified comment exists\", () => { pm.expect(data).to.be.an('array'); pm.expect(data.some((c) => c.aiVerified === true)).to.eql(true); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Verified comment exists\", () => { pm.expect(body).to.be.an('array'); pm.expect(body.some((c) => c.aiVerified === true)).to.eql(true); });"
                 ]
               }
             }
@@ -1632,9 +1667,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });",
-                  "pm.test(\"Store alertId\", () => { pm.expect(data.id).to.exist; pm.environment.set('alertId', String(data.id)); pm.collectionVariables.set('alertId', String(data.id)); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\",\"eventTicketId\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store alertId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('alertId', String(body.id)); pm.collectionVariables.set('alertId', String(body.id)); });"
                 ]
               }
             }
@@ -1673,8 +1709,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response includes id\", () => { pm.expect(data).to.have.property('id');  });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\",\"eventTicketId\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });"
                 ]
               }
             }
@@ -1700,8 +1737,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Response is an array\", () => { pm.expect(data).to.be.an('array'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response is an array\", () => { pm.expect(body).to.be.an('array'); });"
                 ]
               }
             }
@@ -1727,8 +1765,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Forbidden response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1754,8 +1793,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Alert is acknowledged\", () => { pm.expect(data).to.have.property('acknowledged', true); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"alertId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Alert is acknowledged\", () => { pm.expect(body).to.have.property('acknowledged', true); });"
                 ]
               }
             }
@@ -1781,8 +1821,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Not found response\", () => { pm.expect(data).to.be.an('object'); });"
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Not found response\", () => { pm.expect(body).to.be.an('object'); });"
                 ]
               }
             }
@@ -1808,8 +1849,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "const data = (() => { try { return pm.response.json(); } catch (_) { return null; } })();",
-                  "pm.test(\"Gateway is healthy\", () => { pm.expect(data).to.have.property('status', 'UP'); });"
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Gateway is healthy\", () => { pm.expect(body).to.have.property('status', 'UP'); });"
                 ]
               }
             }
