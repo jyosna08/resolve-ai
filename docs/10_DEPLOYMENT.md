@@ -46,3 +46,14 @@ VITE_API_BASE_URL=http://localhost:8080
 - **JVM:** `JAVA_OPTS` defaults to `-Xmx384m -XX:+ExitOnOutOfMemoryError` and can be overridden in `docker/.env` (use `-Xmx256m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError` on 8 GB laptops). Plan for about 4 GB of RAM for the whole stack; on AWS use an 8 GB instance such as `t3.large`.
 - **Low-memory laptops:** set `memory=4GB` in `%USERPROFILE%\.wslconfig`, set `COMPOSE_PARALLEL_LIMIT=2` before building, and start the stack in stages (infrastructure first, then services, then the frontend).
 - **Production notes:** the MVP uses `ddl-auto=update`; open only the required ports in the cloud firewall; replace the sample `JWT_SECRET` and database password.
+
+## 6. CI/CD Workflow Details (`.github/workflows/ci-cd.yml`)
+
+- **Triggers:** push and pull request to `main` and `develop`, plus manual `workflow_dispatch`. A newer run on the same branch cancels the older one.
+- **Jobs:**
+  1. `backend-tests`: matrix of the 6 services on JDK 17 (Temurin) with the Maven cache, running `mvn -B test` in `backend/<service>`.
+  2. `frontend`: Node 20, `npm ci`, `npm test`, `npm run build` in `frontend/`.
+  3. `docker-build`: after both test jobs pass, builds the 7 images (6 services + frontend) with Buildx and the GitHub Actions cache. Images are pushed to Docker Hub as `<DOCKER_USERNAME>/resolveai-<name>` with tags `latest` and the commit SHA **only on a push to `main`**. Pull requests and `develop` build without pushing.
+  4. `compose-smoke` (push to `main` or manual run only): creates a temporary `docker/.env` with generated secrets, starts the full stack with Docker Compose, waits for the gateway to be healthy, checks that 5 services are registered in Eureka and that register + login + ticket creation work through the gateway, then tears everything down.
+- **Required repository secrets:** `DOCKER_USERNAME`, `DOCKER_PASSWORD` (a Docker Hub access token with Read & Write). Optional repository variable: `VITE_API_BASE_URL` (baked into the frontend image; defaults to `http://localhost:8080`).
+- **Deployment** is manual in this release: on the server run `docker compose pull && docker compose up -d` and check `/actuator/health`.
