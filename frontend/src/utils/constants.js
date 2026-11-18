@@ -1,4 +1,6 @@
 export const ROLES = Object.freeze({ CUSTOMER: 'CUSTOMER', AGENT: 'AGENT', ADMIN: 'ADMIN' })
+export const ADMIN_TEAM_PATH = '/admin/team'
+export const CREATABLE_ROLES = Object.freeze([ROLES.AGENT, ROLES.ADMIN])
 export const DEPARTMENTS = Object.freeze({ TECHNICAL: 'TECHNICAL', BILLING: 'BILLING', FRONTEND: 'FRONTEND', DEVOPS: 'DEVOPS', GENERAL: 'GENERAL' })
 export const TICKET_STATUS = Object.freeze({ TO_DO: 'TO_DO', IN_PROGRESS: 'IN_PROGRESS', RESOLVED: 'RESOLVED' })
 export const PRIORITY = Object.freeze({ CRITICAL: 'CRITICAL', HIGH: 'HIGH', MEDIUM: 'MEDIUM', LOW: 'LOW' })

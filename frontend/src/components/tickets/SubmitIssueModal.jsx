@@ -5,6 +5,7 @@ import ErrorBanner from '@/components/common/ErrorBanner.jsx'
 import FormField from '@/components/common/FormField.jsx'
 import Modal from '@/components/common/Modal.jsx'
 import { getErrorMessage } from '@/utils/errors.js'
+import useSubmitGuard from '@/hooks/useSubmitGuard.js'
 import { validateTicketForm } from '@/utils/validators.js'
 
 /** Ticket submission dialog that remains locked while AI triage is running. */
@@ -12,7 +13,7 @@ export default function SubmitIssueModal({ isOpen, onClose, onCreated }) {
   const [values, setValues] = useState({ title: '', description: '' })
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { isSubmitting, runOnce } = useSubmitGuard()
   const titleRef = useRef(null)
   const descriptionRef = useRef(null)
 
@@ -26,15 +27,16 @@ export default function SubmitIssueModal({ isOpen, onClose, onCreated }) {
       (nextErrors.title ? titleRef : descriptionRef).current?.focus()
       return
     }
-    setIsSubmitting(true)
-    try {
-      const ticket = await createTicket({ title: values.title.trim(), description: values.description.trim() })
-      onCreated?.(ticket)
-      setValues({ title: '', description: '' }); setErrors({})
-      onClose?.()
-    } catch (error) {
-      setApiError(getErrorMessage(error, 'Could not submit your issue. Please try again.'))
-    } finally { setIsSubmitting(false) }
+    await runOnce(async () => {
+      try {
+        const ticket = await createTicket({ title: values.title.trim(), description: values.description.trim() })
+        onCreated?.(ticket)
+        setValues({ title: '', description: '' }); setErrors({})
+        onClose?.()
+      } catch (error) {
+        setApiError(getErrorMessage(error, 'Could not submit your issue. Please try again.'))
+      }
+    })
   }
 
   return <Modal isOpen={isOpen} onClose={onClose} title="Submit an issue" closeDisabled={isSubmitting} size="md">

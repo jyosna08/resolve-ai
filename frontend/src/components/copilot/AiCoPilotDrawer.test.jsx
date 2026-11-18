@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { CATEGORY, PRIORITY, SENTIMENT, TICKET_STATUS } from '@/utils/constants.js'
 import AiCoPilotDrawer from './AiCoPilotDrawer.jsx'
 
@@ -49,6 +49,14 @@ describe('AiCoPilotDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify & Send Reply' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Ticket already resolved')
     expect(onRefresh).toHaveBeenCalledOnce()
+  })
+  it('sends only one verify request for two rapid clicks', () => {
+    verifyReply.mockReturnValue(new Promise(() => {}))
+    render(<AiCoPilotDrawer ticket={makeTicket()} isOpen onClose={() => {}} />)
+    const button = screen.getByRole('button', { name: 'Verify & Send Reply' })
+    act(() => { fireEvent.click(button); fireEvent.click(button) })
+    expect(verifyReply).toHaveBeenCalledOnce()
+    expect(button).toBeDisabled()
   })
   it('shows resolved tickets read-only with comments', async () => {
     getTicketComments.mockResolvedValue([{ id: 2, authorName: 'Morgan Agent', message: 'Resolved with a verified reply.', aiVerified: true, createdAt: '2026-11-17T11:00:00' }])

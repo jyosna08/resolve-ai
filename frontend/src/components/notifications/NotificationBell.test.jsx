@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NotificationBell from './NotificationBell.jsx'
@@ -41,6 +41,14 @@ describe('NotificationBell', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Notifications, 1 active alerts' })).toBeInTheDocument())
     expect(screen.queryByText('Payment outage')).not.toBeInTheDocument(); expect(acknowledgeAlert).toHaveBeenCalledWith(1)
   })
+  it('ignores a rapid second acknowledgement click', async () => {
+    acknowledgeAlert.mockReturnValue(new Promise(() => {}))
+    renderBell()
+    fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 2 active alerts' }))
+    const button = screen.getAllByRole('button', { name: 'Acknowledge' })[0]
+    act(() => { fireEvent.click(button); fireEvent.click(button) })
+    expect(acknowledgeAlert).toHaveBeenCalledOnce()
+  })
   it('restores a failed acknowledgement and shows its error', async () => {
     acknowledgeAlert.mockRejectedValue({ response: { status: 500, data: { message: 'Could not acknowledge.' } } })
     renderBell()
@@ -59,7 +67,7 @@ describe('NotificationBell', () => {
   })
   it('shows the empty state and retries a loading error', async () => {
     getAlerts.mockRejectedValueOnce({ response: { status: 503, data: { message: 'Notification service unavailable.' } } }).mockResolvedValueOnce([])
-    render(<MemoryRouter><NotificationBell /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationBell /></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Notifications, 0 active alerts' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Notification service unavailable.')
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
