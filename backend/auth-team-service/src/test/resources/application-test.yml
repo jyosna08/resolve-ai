@@ -16,6 +16,10 @@ eureka:
   instance:
     enabled: false
 app:
+  bootstrap-admin:
+    name:
+    email:
+    password:
   jwt:
     secret: resolveai-test-secret-that-is-definitely-at-least-32-bytes
     expiration-ms: 86400000

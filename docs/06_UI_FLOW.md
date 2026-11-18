@@ -95,3 +95,10 @@ Rules: one component per file; pages only compose components; components never c
 - Every timestamp from the API is UTC without a zone suffix. The frontend parses them only through `utils/dateTime.js` (`parseApiDateTime`), which treats a value with no `Z` or offset as UTC, and then displays it in the viewer's local time zone.
 - SLA countdowns ("Due in 5h 20m" / "Overdue by 2h 10m") are computed from the parsed UTC instant, so they are correct in any time zone.
 - Server-side "Resolved Today" uses the server's UTC date, so the day boundary follows UTC (accepted for the MVP).
+
+## 11. Registration, Team Management and Duplicate Submit Guard
+
+- `/register` creates **customer** accounts only (no role or department fields). Agents and admins are created by an `ADMIN`.
+- **Team page (`/admin/team`, `ADMIN` only):** a form (full name, email, password, role `AGENT`/`ADMIN`, department for agents) that calls `POST /api/users`. Success shows a notice and clears the form; `409` shows "An account with this email already exists." under the email field. The navbar user menu shows a **Team** link for `ADMIN` only.
+- `ADMIN` lands on `/dashboard` like an agent.
+- **Submit Issue** and the other forms ignore a second submit while one is in flight (button disabled immediately, plus a guard so a fast double click cannot send two requests).
