@@ -1,0 +1,331 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Test every Spring Boot service independently and retain reports if one fails.
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - discovery-server
+          - api-gateway
+          - auth-team-service
+          - ai-triage-service
+          - ticket-workflow-service
+          - notification-sla-service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: backend/${{ matrix.service }}/pom.xml
+
+      - name: Run backend tests
+        run: mvn -B test
+        working-directory: backend/${{ matrix.service }}
+
+      - name: Upload Surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-${{ matrix.service }}
+          path: backend/${{ matrix.service }}/target/surefire-reports
+          retention-days: 7
+
+  # Install, test, and build the Vite frontend on Node 20.
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build
+
+  # Build all seven images; publish only for pushes to main.
+  docker-build:
+    needs: [backend-tests, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: discovery-server
+            context: backend/discovery-server
+          - name: api-gateway
+            context: backend/api-gateway
+          - name: auth-team-service
+            context: backend/auth-team-service
+          - name: ai-triage-service
+            context: backend/ai-triage-service
+          - name: ticket-workflow-service
+            context: backend/ticket-workflow-service
+          - name: notification-sla-service
+            context: backend/notification-sla-service
+          - name: frontend
+            context: frontend
+    env:
+      IMAGE_OWNER: ${{ secrets.DOCKER_USERNAME || 'resolveai' }}
+      PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and optionally push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.context }}
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ env.IMAGE_OWNER }}/resolveai-${{ matrix.name }}:latest
+            ${{ env.IMAGE_OWNER }}/resolveai-${{ matrix.name }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max
+          provenance: false
+          build-args: ${{ matrix.name == 'frontend' && format('VITE_API_BASE_URL={0}', vars.VITE_API_BASE_URL || 'http://localhost:8080') || '' }}
+
+  # Start the Compose system on main pushes and manual runs; exercise registration and ticket creation.
+  compose-smoke:
+    needs: [docker-build]
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create temporary Compose environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          cp docker/.env.example docker/.env
+
+          postgres_password="$(openssl rand -hex 32)"
+          rabbitmq_password="$(openssl rand -hex 32)"
+          jwt_secret="$(openssl rand -hex 32)"
+          printf '::add-mask::%s\n' "$postgres_password"
+          printf '::add-mask::%s\n' "$rabbitmq_password"
+          printf '::add-mask::%s\n' "$jwt_secret"
+
+          set_env() {
+            local key="$1"
+            local value="$2"
+            local temporary_file
+            temporary_file="$(mktemp)"
+            CI_ENV_KEY="$key" CI_ENV_VALUE="$value" awk '
+              BEGIN {
+                prefix = ENVIRON["CI_ENV_KEY"] "="
+                replacement = prefix ENVIRON["CI_ENV_VALUE"]
+                written = 0
+              }
+              index($0, prefix) == 1 {
+                if (!written) print replacement
+                written = 1
+                next
+              }
+              index($0, "# " prefix) == 1 { next }
+              { print }
+              END {
+                if (!written) print replacement
+              }
+            ' docker/.env > "$temporary_file"
+            mv "$temporary_file" docker/.env
+          }
+
+          set_env POSTGRES_PASSWORD "$postgres_password"
+          set_env RABBITMQ_PASS "$rabbitmq_password"
+          set_env JWT_SECRET "$jwt_secret"
+          set_env GEMINI_API_KEY ""
+          set_env RABBITMQ_ENABLED true
+          set_env JAVA_OPTS '-Xmx256m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError'
+
+      - name: Start Compose stack
+        run: docker compose -f docker/docker-compose.yml up -d --build
+
+      - name: Wait for gateway health
+        shell: bash
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 600))
+          until curl --fail --silent --show-error --max-time 10 http://localhost:8080/actuator/health >/dev/null; do
+            if (( SECONDS >= deadline )); then
+              echo "::error::Gateway did not become healthy within 10 minutes."
+              docker compose -f docker/docker-compose.yml ps || true
+              docker compose -f docker/docker-compose.yml logs --no-color --tail=80 || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify Eureka registrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          wanted='["API-GATEWAY","AUTH-TEAM-SERVICE","AI-TRIAGE-SERVICE","TICKET-WORKFLOW-SERVICE","NOTIFICATION-SLA-SERVICE"]'
+          deadline=$((SECONDS + 120))
+          while (( SECONDS < deadline )); do
+            response="$(curl --fail --silent --show-error --max-time 10 \
+              -H 'Accept: application/json' http://localhost:8761/eureka/apps || true)"
+            if printf '%s' "$response" | jq -e --argjson expected "$wanted" '
+              .applications.application as $applications
+              | (if ($applications | type) == "array" then $applications else [$applications] end | map(.name)) as $registered
+              | ($registered | length) == 5 and (($expected - $registered) | length) == 0
+            ' >/dev/null 2>&1; then
+              echo "Eureka registered all five expected applications."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Eureka did not register all five expected applications within 2 minutes."
+          docker compose -f docker/docker-compose.yml ps || true
+          docker compose -f docker/docker-compose.yml logs --no-color --tail=80 || true
+          exit 1
+
+      - name: Register customer, log in, and create ticket
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          email="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(openssl rand -hex 6)@example.com"
+          customer_password="CiSmoke-$(openssl rand -hex 16)"
+          printf '::add-mask::%s\n' "$customer_password"
+
+          jq -n --arg fullName 'CI Smoke Customer' --arg email "$email" --arg password "$customer_password" \
+            '{fullName:$fullName,email:$email,password:$password,role:"CUSTOMER"}' > "$RUNNER_TEMP/register-customer.json"
+          if ! register_status="$(curl --fail --silent --show-error --max-time 30 \
+            -o "$RUNNER_TEMP/register-response.json" -w '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            --data-binary "@$RUNNER_TEMP/register-customer.json" \
+            http://localhost:8080/api/auth/register)"; then
+            echo "::error::Customer registration request failed."
+            exit 1
+          fi
+          if [[ "$register_status" != '201' ]]; then
+            echo "::error::Customer registration returned HTTP $register_status; expected 201."
+            exit 1
+          fi
+
+          jq -n --arg email "$email" --arg password "$customer_password" \
+            '{email:$email,password:$password}' > "$RUNNER_TEMP/login-customer.json"
+          if ! login_status="$(curl --fail --silent --show-error --max-time 30 \
+            -o "$RUNNER_TEMP/login-response.json" -w '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            --data-binary "@$RUNNER_TEMP/login-customer.json" \
+            http://localhost:8080/api/auth/login)"; then
+            echo "::error::Customer login request failed."
+            exit 1
+          fi
+          if [[ "$login_status" != '200' ]]; then
+            echo "::error::Customer login returned HTTP $login_status; expected 200."
+            exit 1
+          fi
+          token="$(jq -er '.token // empty' "$RUNNER_TEMP/login-response.json")" || {
+            echo "::error::Customer login response did not include a token."
+            exit 1
+          }
+          printf '::add-mask::%s\n' "$token"
+
+          title="CI smoke payment failure $GITHUB_RUN_ID"
+          jq -n --arg title "$title" \
+            --arg description 'CI smoke test: payment checkout is failing for this customer.' \
+            '{title:$title,description:$description}' > "$RUNNER_TEMP/create-ticket.json"
+          if ! ticket_status="$(curl --fail --silent --show-error --max-time 60 \
+            -o "$RUNNER_TEMP/ticket-response.json" -w '%{http_code}' \
+            -H "Authorization: Bearer $token" \
+            -H 'Content-Type: application/json' \
+            --data-binary "@$RUNNER_TEMP/create-ticket.json" \
+            http://localhost:8080/api/tickets)"; then
+            echo "::error::Ticket creation request failed."
+            exit 1
+          fi
+          if [[ "$ticket_status" != '201' ]]; then
+            echo "::error::Ticket creation returned HTTP $ticket_status; expected 201."
+            exit 1
+          fi
+          ticket_id="$(jq -er '.id // empty' "$RUNNER_TEMP/ticket-response.json")" || {
+            echo "::error::Ticket creation response did not include an id."
+            exit 1
+          }
+
+          if ! curl --fail --silent --show-error --max-time 30 \
+            -H "Authorization: Bearer $token" \
+            http://localhost:8080/api/tickets > "$RUNNER_TEMP/ticket-list.json"; then
+            echo "::error::Ticket list request failed."
+            exit 1
+          fi
+          if ! jq -e --argjson ticket_id "$ticket_id" 'any(.[]; .id == $ticket_id)' \
+            "$RUNNER_TEMP/ticket-list.json" >/dev/null; then
+            echo "::error::New ticket $ticket_id was not present in the customer's ticket list."
+            exit 1
+          fi
+          echo "Customer registration, login, ticket creation, and ticket listing passed."
+
+      - name: Print Compose status
+        if: always()
+        run: docker compose -f docker/docker-compose.yml ps || true
+
+      - name: Capture Compose logs on failure
+        if: failure()
+        run: docker compose -f docker/docker-compose.yml logs --no-color > compose-logs.txt || true
+
+      - name: Upload Compose logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-smoke-logs
+          path: compose-logs.txt
+          if-no-files-found: ignore
+
+      - name: Tear down Compose stack
+        if: always()
+        run: docker compose -f docker/docker-compose.yml down -v || true
