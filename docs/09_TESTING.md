@@ -37,7 +37,11 @@ The original TC-01 through TC-08 identifiers are retained. TC-01 reflects the en
 | TC-07 | `notification-sla-service`: critical event creates an idempotent alert and acknowledgement is role protected | `AlertControllerIntegrationTest.eventIngestIsIdempotentAndRequiresAuthentication`; `AlertControllerIntegrationTest.alertsAndAcknowledgeEnforceRoleAndNotFound`; `AlertServiceImplTest.flaggingCreatesOnlyOverdueUnacknowledgedBreachesAndIsIdempotent` | `05 Notifications` | Automated pass |
 | TC-08 | `frontend`: verify reply resolves the ticket and refreshes the dashboard | `DashboardPage > opens the drawer, verifies a reply, moves the card to resolved, and refreshes KPIs` | `04 Tickets` checks the matching API path | Automated pass |
 
-The Postman collection adds endpoint-level cases beyond the original matrix. It has not been run against a live Compose stack or with Newman in this session.
+The Postman collection was run with Newman against the Docker Compose stack on 2026-11-18: **46 requests, 46 test scripts, 167 assertions, 0 failed**. Command used (credential values are supplied through shell variables and are not recorded here):
+
+```bash
+newman run postman/ResolveAI.postman_collection.json -e postman/ResolveAI.local.postman_environment.json --env-var "adminEmail=${BOOTSTRAP_ADMIN_EMAIL}" --env-var "adminPassword=${BOOTSTRAP_ADMIN_PASSWORD}"
+```
 
 ## 4. Manually verified on 2026-11-18
 
@@ -56,10 +60,15 @@ Verified against the Docker Compose stack:
 - An ADMIN creating an AGENT with department BILLING from the Team page, who can then log in.
 - The duplicate-submit guard (a fast double click on Submit Issue creates only one ticket).
 
-## 5. Pending verification
+## 5. Verification status
 
-- REST fallback with RabbitMQ stopped.
-- Full Postman collection run (Newman).
+### Verified
+
+- **Verified on 2026-11-18:** with RabbitMQ stopped, creating a CRITICAL ticket still returned HTTP 201 and the alert appeared in the agent notification bell through the REST fallback.
+- **Verified on 2026-11-18:** the complete Postman collection ran against the Docker Compose stack with 46 requests, 46 scripts, 167 assertions, and 0 failures; command recorded above.
+
+### Pending
+
 - Deployment on AWS/Vercel.
 - Load/performance testing.
 
