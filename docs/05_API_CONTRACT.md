@@ -6,52 +6,31 @@ All endpoints are routed through `api-gateway` (`http://localhost:8080`). Protec
 
 ### POST `/api/auth/register`
 
-- **Auth:** Public
+- **Auth:** Public. Creates `CUSTOMER` accounts only.
 - **Request Body:**
 
 ```json
 {
-  "fullName": "Priya Sharma",
-  "email": "priya@resolveai.com",
-  "password": "Password@123",
-  "role": "AGENT",
-  "department": "TECHNICAL"
+  "fullName": "Casey Customer",
+  "email": "casey@example.com",
+  "password": "Password@123"
 }
 ```
 
-- **Validation:** `fullName` (NotBlank, max 100), `email` (NotBlank, valid email, max 150, stored lowercase, unique), `password` (NotBlank, 8–100 chars), `role` (NotNull: `CUSTOMER` | `AGENT` | `ADMIN`), `department` (optional: `TECHNICAL` | `BILLING` | `FRONTEND` | `DEVOPS` | `GENERAL`, defaults to `GENERAL`).
+- **Validation:** `fullName` (NotBlank, max 100), `email` (NotBlank, valid email, max 150, stored lowercase, unique), `password` (NotBlank, 8–100 chars). `role` and `department` are optional and ignored for customers: if `role` is sent it must be `CUSTOMER`, otherwise (`AGENT` or `ADMIN`) the request is rejected with `403`.
 - **Success Response (`201 Created`):**
 
 ```json
 {
-  "id": 1,
-  "fullName": "Priya Sharma",
-  "email": "priya@resolveai.com",
-  "role": "AGENT",
-  "department": "TECHNICAL"
+  "id": 7,
+  "fullName": "Casey Customer",
+  "email": "casey@example.com",
+  "role": "CUSTOMER",
+  "department": "GENERAL"
 }
 ```
 
-- **Error Responses:** `400 Bad Request` (validation failure), `409 Conflict` (email already exists).
-- **Note (MVP):** `role` is accepted from the client as-is. Restrict self-registration of `ADMIN`/`AGENT` before production deployment.
-
-### POST `/api/auth/login`
-
-- **Auth:** Public
-- **Request Body:** `{"email": "priya@resolveai.com", "password": "Password@123"}`
-- **Validation:** `email` (NotBlank, valid email), `password` (NotBlank).
-- **Success Response (`200 OK`):**
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "userId": 1,
-  "fullName": "Priya Sharma",
-  "role": "AGENT"
-}
-```
-
-- **Error Response:** `401 Unauthorized` (invalid credentials; the same generic message "Invalid email or password" is returned for unknown email and wrong password).
+- **Error Responses:** `400 Bad Request` (validation failure), `403 Forbidden` (`AGENT`/`ADMIN` requested), `409 Conflict` (email already exists).
 
 ### GET `/api/users/agents/least-loaded?department=TECHNICAL`
 
@@ -73,6 +52,30 @@ All endpoints are routed through `api-gateway` (`http://localhost:8080`). Protec
 - **Description:** Atomically decreases `activeTicketCount` by 1, never below 0 (called when a ticket moves to `RESOLVED`).
 - **Success Response (`200 OK`):** `{"id": 1, "fullName": "Priya Sharma", "activeTicketCount": 2}`
 - **Error Responses:** `401 Unauthorized`, `404 Not Found`.
+
+### POST `/api/users`
+
+- **Auth:** Authenticated, `ADMIN` only (`403` for others).
+- **Description:** Creates a user with any role. This is how `AGENT` and `ADMIN` accounts are created.
+- **Request Body:**
+
+```json
+{
+  "fullName": "Priya Sharma",
+  "email": "priya@resolveai.com",
+  "password": "Password@123",
+  "role": "AGENT",
+  "department": "BILLING"
+}
+```
+
+- **Validation:** same limits as register; `role` is NotNull (`CUSTOMER` | `AGENT` | `ADMIN`); `department` optional, defaults to `GENERAL`.
+- **Success Response (`201 Created`):** `{"id": 8, "fullName": "Priya Sharma", "email": "priya@resolveai.com", "role": "AGENT", "department": "BILLING"}`
+- **Error Responses:** `400`, `401`, `403`, `409` (email already exists).
+
+### First administrator (bootstrap)
+
+On startup `auth-team-service` creates one `ADMIN` from the environment variables `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`, but only when both email and password are set and **no `ADMIN` user exists yet**. It never changes or overwrites an existing user.
 
 ### Standard Error Payload (all services)
 

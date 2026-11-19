@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { acknowledgeAlert, getAlerts } from '@/api/notificationApi.js'
 import { REFRESH_INTERVAL_MS } from '@/utils/constants.js'
+import { toEpochMs } from '@/utils/dateTime.js'
 import { getErrorMessage, isRequestCanceled } from '@/utils/errors.js'
 import usePolling from './usePolling.js'
 
@@ -40,7 +41,7 @@ export default function useAlerts() {
     setAlerts((current) => current.filter((alert) => alert.id !== id))
     try { await acknowledgeAlert(id) }
     catch (requestError) {
-      setAlerts((current) => current.some((alert) => alert.id === id) ? current : [...current, removed].sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0)))
+      setAlerts((current) => current.some((alert) => alert.id === id) ? current : [...current, removed].sort((left, right) => (toEpochMs(right.createdAt) ?? 0) - (toEpochMs(left.createdAt) ?? 0)))
       setError(getErrorMessage(requestError, 'Could not acknowledge this alert.'))
     }
   }, [alerts])

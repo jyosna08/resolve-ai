@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext.jsx'
 import LoginForm from './LoginForm.jsx'
@@ -35,5 +35,13 @@ describe('LoginForm', () => {
     authApi.login.mockResolvedValue({ token: 'token', userId: 4, fullName: 'Kim Customer', role: ROLES.CUSTOMER })
     renderLogin([{ pathname: '/login', state: { from: { pathname: '/my-tickets' } } }]); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'kim@example.com' } }); fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password123' } }); fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
     await waitFor(() => expect(screen.getByText('At /my-tickets')).toBeInTheDocument())
+  })
+  it('ignores a rapid second submit while login is pending', () => {
+    authApi.login.mockReturnValue(new Promise(() => {}))
+    renderLogin(); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'user@example.com' } }); fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password123' } })
+    const button = screen.getByRole('button', { name: 'Log in' })
+    act(() => { fireEvent.click(button); fireEvent.click(button) })
+    expect(authApi.login).toHaveBeenCalledOnce()
+    expect(button).toBeDisabled()
   })
 })

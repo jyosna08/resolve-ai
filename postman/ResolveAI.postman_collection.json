@@ -1,0 +1,1862 @@
+{
+  "info": {
+    "name": "ResolveAI API",
+    "description": "End-to-end API checks through the API Gateway. Configure a bootstrap administrator in docker/.env before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.info.requestName === 'Admin login') { const stamp = Date.now(); pm.environment.set('runStamp', String(stamp)); pm.environment.set('customerEmail', 'customer-' + stamp + '@example.com'); pm.environment.set('agentEmail', 'agent-' + stamp + '@example.com'); pm.environment.set('otherCustomerEmail', 'other-customer-' + stamp + '@example.com'); pm.environment.set('eventTicketId', String(stamp)); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "testPassword",
+      "value": "Password@123",
+      "type": "string",
+      "description": "Sample password for collection-created test users."
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agentToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherCustomerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticketId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "alertId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "runStamp",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agentEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherCustomerEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "eventTicketId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "generalAgentEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "authCustomerEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "forbiddenAGENTEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "forbiddenADMINEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "forbiddenTeamEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminCreatedAgentEmail",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Setup",
+      "item": [
+        {
+          "name": "Admin login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Admin login. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store adminToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('adminToken', String(body.token)); pm.collectionVariables.set('adminToken', String(body.token)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create BILLING agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users",
+            "description": "Create BILLING agent. Authentication: Bearer {{adminToken}}. Role: ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Agent\",\n  \"email\": \"{{agentEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"AGENT\",\n  \"department\": \"BILLING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"agentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store agentId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('agentId', String(body.id)); pm.collectionVariables.set('agentId', String(body.id)); });",
+                  "pm.test(\"Created BILLING agent\", () => { pm.expect(body.role).to.eql('AGENT'); pm.expect(body.department).to.eql('BILLING'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create GENERAL fallback agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users",
+            "description": "Create GENERAL fallback agent. Authentication: Bearer {{adminToken}}. Role: ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman General Agent\",\n  \"email\": \"{{generalAgentEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"AGENT\",\n  \"department\": \"GENERAL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('generalAgentEmail', 'general-agent-' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"generalAgentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Created GENERAL agent\", () => { pm.expect(body.role).to.eql('AGENT'); pm.expect(body.department).to.eql('GENERAL'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Register customer. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store customerId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('customerId', String(body.id)); pm.collectionVariables.set('customerId', String(body.id)); });",
+                  "pm.test(\"Customer role is assigned by server\", () => { pm.expect(body.role).to.eql('CUSTOMER'); pm.expect(body.department).to.eql('GENERAL'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login customer. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store customerToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('customerToken', String(body.token)); pm.collectionVariables.set('customerToken', String(body.token)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login agent. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{agentEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store agentToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('agentToken', String(body.token)); pm.collectionVariables.set('agentToken', String(body.token)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register second customer for ownership check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Register second customer for ownership check. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Other Customer\",\n  \"email\": \"{{otherCustomerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"otherCustomerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login second customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login second customer. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otherCustomerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"otherCustomerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });",
+                  "pm.test(\"Store otherCustomerToken\", () => { pm.expect(body.token, \"Missing token in response; check configured credentials and run collection top to bottom.\").to.exist; pm.environment.set('otherCustomerToken', String(body.token)); pm.collectionVariables.set('otherCustomerToken', String(body.token)); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Register customer. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Auth Test Customer\",\n  \"email\": \"{{authCustomerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('authCustomerEmail', 'auth-' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"authCustomerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes role\", () => { pm.expect(body).to.have.property('role');  });",
+                  "pm.test(\"Public registration returns CUSTOMER\", () => { pm.expect(body.role).to.eql('CUSTOMER'); pm.expect(body.department).to.eql('GENERAL'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register duplicate email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Register duplicate email. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Duplicate Customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Error payload is present\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public registration rejects AGENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Public registration rejects AGENT. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Forbidden User\",\n  \"email\": \"{{forbiddenAGENTEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"AGENT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('forbiddenAGENTEmail', 'forbidden-agent-' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"forbiddenAGENTEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public registration rejects ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Public registration rejects ADMIN. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Forbidden User\",\n  \"email\": \"{{forbiddenADMINEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"ADMIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('forbiddenADMINEmail', 'forbidden-admin-' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"forbiddenADMINEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register invalid body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Register invalid body. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login customer. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes token\", () => { pm.expect(body).to.have.property('token');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login wrong password. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{testPassword}}-wrong\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Unauthorized response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Users",
+      "item": [
+        {
+          "name": "Least-loaded BILLING agent",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/agents/least-loaded?department=BILLING",
+            "description": "Least-loaded BILLING agent. Authentication: Bearer {{adminToken}}. Role: ADMIN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(body).to.have.property('activeTicketCount');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Least-loaded invalid department",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/agents/least-loaded?department=NOT_A_DEPARTMENT",
+            "description": "Least-loaded invalid department. Authentication: Bearer {{adminToken}}. Role: ADMIN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Least-loaded without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/agents/least-loaded?department=BILLING",
+            "description": "Least-loaded without token. Authentication: none. Role: public."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Unauthorized response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Increment workload",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/{{agentId}}/workload/increment",
+            "description": "Increment workload. Authentication: Bearer {{adminToken}}. Role: ADMIN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentId\",\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(body).to.have.property('activeTicketCount');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decrement workload",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/{{agentId}}/workload/decrement",
+            "description": "Decrement workload. Authentication: Bearer {{adminToken}}. Role: ADMIN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentId\",\"adminToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes activeTicketCount\", () => { pm.expect(body).to.have.property('activeTicketCount');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent cannot create users",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users",
+            "description": "Agent cannot create users. Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Agent\",\n  \"email\": \"{{forbiddenTeamEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"AGENT\",\n  \"department\": \"BILLING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('forbiddenTeamEmail', 'forbidden-team-' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\",\"forbiddenTeamEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin creates AGENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users",
+            "description": "Admin creates AGENT. Authentication: Bearer {{adminToken}}. Role: ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Agent\",\n  \"email\": \"{{adminCreatedAgentEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"AGENT\",\n  \"department\": \"BILLING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('adminCreatedAgentEmail', 'extra-agent-' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"adminCreatedAgentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Created user has expected role\", () => { pm.expect(body.role).to.eql('AGENT'); pm.expect(body.department).to.eql('BILLING'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin create duplicate email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users",
+            "description": "Admin create duplicate email. Authentication: Bearer {{adminToken}}. Role: ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Agent\",\n  \"email\": \"{{agentEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"AGENT\",\n  \"department\": \"BILLING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"adminToken\",\"agentEmail\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Conflict response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 AI Triage",
+      "item": [
+        {
+          "name": "Analyze ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/ai/analyze",
+            "description": "Analyze ticket. Authentication: Bearer {{customerToken}}. Role: CUSTOMER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Payment gateway checkout is failing\",\n  \"description\": \"Customers see a payment error and cannot complete checkout.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Gemini may take up to 20 seconds. With no Gemini key, fallback is GENERAL/MEDIUM/NEUTRAL."
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes category\", () => { pm.expect(body).to.have.property('category');  });",
+                  "pm.test(\"Response includes priority\", () => { pm.expect(body).to.have.property('priority');  });",
+                  "pm.test(\"Response includes sentiment\", () => { pm.expect(body).to.have.property('sentiment');  });",
+                  "pm.test(\"Response includes summary\", () => { pm.expect(body).to.have.property('summary');  });",
+                  "pm.test(\"Response includes draftReply\", () => { pm.expect(body).to.have.property('draftReply');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Analyze without token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/ai/analyze",
+            "description": "Analyze without token. Authentication: none. Role: public.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Payment gateway issue\",\n  \"description\": \"Checkout returns an error for all users.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Unauthorized response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Analyze invalid body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/ai/analyze",
+            "description": "Analyze invalid body. Authentication: Bearer {{customerToken}}. Role: CUSTOMER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"bad\",\n  \"description\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Tickets",
+      "item": [
+        {
+          "name": "Create ticket as customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets",
+            "description": "Create ticket as customer. Authentication: Bearer {{customerToken}}. Role: CUSTOMER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Payment gateway checkout issue\",\n  \"description\": \"Checkout fails for customers and payment cannot be completed.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store ticketId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('ticketId', String(body.id)); pm.collectionVariables.set('ticketId', String(body.id)); });",
+                  "pm.test(\"Response has expected status field\", () => { pm.expect(body).to.have.property('status'); });",
+                  "pm.test(\"aiSummary is redacted for customer\", () => { pm.expect(body).to.have.property('aiSummary', null); });",
+                  "pm.test(\"aiDraftReply is redacted for customer\", () => { pm.expect(body).to.have.property('aiDraftReply', null); });",
+                  "pm.test(\"sentiment is redacted for customer\", () => { pm.expect(body).to.have.property('sentiment', null); });",
+                  "pm.test(\"slaDeadline is redacted for customer\", () => { pm.expect(body).to.have.property('slaDeadline', null); });",
+                  "pm.test(\"assignedAgentId is redacted for customer\", () => { pm.expect(body).to.have.property('assignedAgentId', null); });",
+                  "pm.test(\"assignedAgentName is redacted for customer\", () => { pm.expect(body).to.have.property('assignedAgentName', null); });",
+                  "pm.test(\"Response includes priority\", () => { pm.expect(body).to.have.property('priority');  });",
+                  "pm.test(\"Response includes category\", () => { pm.expect(body).to.have.property('category');  });",
+                  "pm.test(\"Response includes title\", () => { pm.expect(body).to.have.property('title');  });",
+                  "pm.test(\"Response includes description\", () => { pm.expect(body).to.have.property('description');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create invalid ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets",
+            "description": "Create invalid ticket. Authentication: Bearer {{customerToken}}. Role: CUSTOMER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"bad\",\n  \"description\": \"short\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Validation error is present\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer list (own tickets)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets",
+            "description": "Customer list (own tickets). Authentication: Bearer {{customerToken}}. Role: CUSTOMER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response is an owned ticket with customer fields redacted\", () => { pm.expect(body).to.be.an('array'); const ticket = body.find((t) => t.id === Number(pm.environment.get('ticketId'))); pm.expect(ticket).to.exist; for (const field of ['aiSummary','aiDraftReply','sentiment','slaDeadline','assignedAgentId','assignedAgentName']) pm.expect(ticket).to.have.property(field, null); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent list with filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets?status=TO_DO&priority=MEDIUM&search=payment",
+            "description": "Agent list with filters. Authentication: Bearer {{agentToken}}. Role: AGENT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response is an array\", () => { pm.expect(body).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent gets full ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}",
+            "description": "Agent gets full ticket. Authentication: Bearer {{agentToken}}. Role: AGENT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Full AI and assignment body is returned\", () => { pm.expect(body.aiSummary).to.be.a('string').and.not.empty; pm.expect(body.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(body.sentiment).to.be.a('string').and.not.empty; pm.expect(body.slaDeadline).to.be.a('string').and.not.empty; pm.expect(body.assignedAgentId).to.be.a('number'); pm.expect(body.assignedAgentName).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer cannot read another customer ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{otherCustomerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}",
+            "description": "Customer cannot read another customer ticket. Authentication: Bearer {{otherCustomerToken}}. Role: CUSTOMER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"otherCustomerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Not found response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer gets dashboard stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/dashboard-stats",
+            "description": "Customer gets dashboard stats. Authentication: Bearer {{customerToken}}. Role: CUSTOMER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes totalOpen\", () => { pm.expect(body).to.have.property('totalOpen');  });",
+                  "pm.test(\"Response includes criticalAlerts\", () => { pm.expect(body).to.have.property('criticalAlerts');  });",
+                  "pm.test(\"Response includes resolvedToday\", () => { pm.expect(body).to.have.property('resolvedToday');  });",
+                  "pm.test(\"Response includes slaWarnings\", () => { pm.expect(body).to.have.property('slaWarnings');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent moves ticket to IN_PROGRESS",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}/status",
+            "description": "Agent moves ticket to IN_PROGRESS. Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response has expected status field\", () => { pm.expect(body).to.have.property('status'); });",
+                  "pm.test(\"Full agent DTO is returned\", () => { pm.expect(body.aiSummary).to.be.a('string').and.not.empty; pm.expect(body.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(body.sentiment).to.be.a('string').and.not.empty; pm.expect(body.slaDeadline).to.be.a('string').and.not.empty; pm.expect(body.assignedAgentId).to.be.a('number'); pm.expect(body.assignedAgentName).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer status update is forbidden",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}/status",
+            "description": "Customer status update is forbidden. Authentication: Bearer {{customerToken}}. Role: CUSTOMER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"TO_DO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent verifies and sends reply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}/verify-reply",
+            "description": "Agent verifies and sends reply. Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"replyMessage\": \"We are investigating this payment issue and will share an update shortly.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response has expected status field\", () => { pm.expect(body).to.have.property('status'); });",
+                  "pm.test(\"Resolved response retains full agent DTO\", () => { pm.expect(body.status).to.eql('RESOLVED'); pm.expect(body.aiSummary).to.be.a('string').and.not.empty; pm.expect(body.aiDraftReply).to.be.a('string').and.not.empty; pm.expect(body.sentiment).to.be.a('string').and.not.empty; pm.expect(body.slaDeadline).to.be.a('string').and.not.empty; pm.expect(body.assignedAgentId).to.be.a('number'); pm.expect(body.assignedAgentName).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Second reply verification conflicts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}/verify-reply",
+            "description": "Second reply verification conflicts. Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"replyMessage\": \"A second resolution should not be accepted.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Conflict response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolved ticket cannot move back",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}/status",
+            "description": "Resolved ticket cannot move back. Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Conflict response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comments include verified reply",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}/comments",
+            "description": "Comments include verified reply. Authentication: Bearer {{agentToken}}. Role: AGENT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"ticketId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Verified comment exists\", () => { pm.expect(body).to.be.an('array'); pm.expect(body.some((c) => c.aiVerified === true)).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Notifications",
+      "item": [
+        {
+          "name": "Publish critical event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/events/critical",
+            "description": "Publish critical event. Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketId\": \"{{eventTicketId}}\",\n  \"title\": \"Postman critical event\",\n  \"priority\": \"CRITICAL\",\n  \"assignedAgentName\": \"Postman Agent\",\n  \"slaDeadline\": \"2027-01-01T00:00:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\",\"eventTicketId\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });",
+                  "pm.test(\"Store alertId\", () => { pm.expect(body.id, \"Missing id in response; check the preceding setup request.\").to.exist; pm.environment.set('alertId', String(body.id)); pm.collectionVariables.set('alertId', String(body.id)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Repeat critical event (idempotent)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/events/critical",
+            "description": "Repeat critical event (idempotent). Authentication: Bearer {{agentToken}}. Role: AGENT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketId\": \"{{eventTicketId}}\",\n  \"title\": \"Postman critical event\",\n  \"priority\": \"CRITICAL\",\n  \"assignedAgentName\": \"Postman Agent\",\n  \"slaDeadline\": \"2027-01-01T00:00:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\",\"eventTicketId\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response includes id\", () => { pm.expect(body).to.have.property('id');  });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List alerts as agent",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/alerts",
+            "description": "List alerts as agent. Authentication: Bearer {{agentToken}}. Role: AGENT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Response is an array\", () => { pm.expect(body).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer cannot list alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/alerts",
+            "description": "Customer cannot list alerts. Authentication: Bearer {{customerToken}}. Role: CUSTOMER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"customerToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Forbidden response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acknowledge alert",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/alerts/{{alertId}}/acknowledge",
+            "description": "Acknowledge alert. Authentication: Bearer {{agentToken}}. Role: AGENT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"alertId\",\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Alert is acknowledged\", () => { pm.expect(body).to.have.property('acknowledged', true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acknowledge unknown alert",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{agentToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/alerts/999999999/acknowledge",
+            "description": "Acknowledge unknown alert. Authentication: Bearer {{agentToken}}. Role: AGENT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test(\"Required runtime variables are available\", () => { const missingRuntimeVariables = [\"agentToken\"].filter((key) => !pm.environment.get(key) && !pm.collectionVariables.get(key)); pm.expect(missingRuntimeVariables, \"Missing runtime variables: \" + missingRuntimeVariables.join(\", \") + \". Run the collection top to bottom starting at 00 Setup.\").to.eql([]); });",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Not found response\", () => { pm.expect(body).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Health",
+      "item": [
+        {
+          "name": "Gateway health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health",
+            "description": "Gateway health. Authentication: none. Role: public."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = (() => { try { const parsedBody = pm.response.json(); return parsedBody && typeof parsedBody === \"object\" ? parsedBody : {}; } catch (parseError) { return {}; } })();",
+                  "pm.test(\"Gateway is healthy\", () => { pm.expect(body).to.have.property('status', 'UP'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,249 @@
+name: resolveai
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - resolveai-net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?RABBITMQ_PASS is required}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - resolveai-net
+
+  discovery-server:
+    image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/resolveai-discovery-server:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx384m -XX:+ExitOnOutOfMemoryError}
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - resolveai-net
+
+  auth-team-service:
+    image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/resolveai-auth-team-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx384m -XX:+ExitOnOutOfMemoryError}
+      TZ: UTC
+      DB_URL: jdbc:postgresql://postgres:5432/auth_db
+      DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Administrator}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - resolveai-net
+
+  ai-triage-service:
+    image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/resolveai-ai-triage-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx384m -XX:+ExitOnOutOfMemoryError}
+      TZ: UTC
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - resolveai-net
+
+  ticket-workflow-service:
+    image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/resolveai-ticket-workflow-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx384m -XX:+ExitOnOutOfMemoryError}
+      TZ: UTC
+      DB_URL: jdbc:postgresql://postgres:5432/ticket_db
+      DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      RABBITMQ_ENABLED: ${RABBITMQ_ENABLED:-true}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USER:?RABBITMQ_USER is required}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASS:?RABBITMQ_PASS is required}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    networks:
+      - resolveai-net
+
+  notification-sla-service:
+    image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/resolveai-notification-sla-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx384m -XX:+ExitOnOutOfMemoryError}
+      TZ: UTC
+      DB_URL: jdbc:postgresql://postgres:5432/notification_db
+      DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      RABBITMQ_ENABLED: ${RABBITMQ_ENABLED:-true}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USER:?RABBITMQ_USER is required}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASS:?RABBITMQ_PASS is required}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - resolveai-net
+
+  api-gateway:
+    image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/resolveai-api-gateway:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      auth-team-service:
+        condition: service_started
+      ai-triage-service:
+        condition: service_started
+      ticket-workflow-service:
+        condition: service_started
+      notification-sla-service:
+        condition: service_started
+    environment:
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx384m -XX:+ExitOnOutOfMemoryError}
+      TZ: UTC
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - resolveai-net
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2019/config/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - resolveai-net
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  resolveai-net:
+    driver: bridge

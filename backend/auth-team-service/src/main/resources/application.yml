@@ -16,6 +16,10 @@ eureka:
 server:
   port: 8081
 app:
+  bootstrap-admin:
+    name: ${BOOTSTRAP_ADMIN_NAME:Administrator}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   jwt:
     secret: ${JWT_SECRET:resolveai-local-development-secret-change-before-prod-2026}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
