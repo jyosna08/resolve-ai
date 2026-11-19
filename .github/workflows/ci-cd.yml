@@ -207,6 +207,48 @@ jobs:
             sleep 10
           done
 
+      - name: Wait for Compose services to become healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 600))
+          unhealthy_services=""
+          healthcheck_count=0
+
+          while (( SECONDS < deadline )); do
+            unhealthy_services=""
+            healthcheck_count=0
+            container_ids="$(docker compose -f docker/docker-compose.yml ps --all -q)"
+
+            for container_id in $container_ids; do
+              inspection="$(docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}}|{{if .Config.Healthcheck}}{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}{{else}}none{{end}}' "$container_id")"
+              IFS='|' read -r service health_status <<< "$inspection"
+
+              if [[ "$health_status" == "none" ]]; then
+                continue
+              fi
+
+              healthcheck_count=$((healthcheck_count + 1))
+              if [[ "$health_status" != "healthy" ]]; then
+                unhealthy_services+=" $service"
+              fi
+            done
+
+            if (( healthcheck_count > 0 )) && [[ -z "$unhealthy_services" ]]; then
+              echo "All $healthcheck_count Compose containers with healthchecks are healthy."
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "::error::Timed out waiting for Compose containers with healthchecks to become healthy."
+          docker compose -f docker/docker-compose.yml ps || true
+          for service in $unhealthy_services; do
+            echo "Recent logs for unhealthy service: $service"
+            docker compose -f docker/docker-compose.yml logs --no-color --tail=80 "$service" || true
+          done
+          exit 1
+
       - name: Verify Eureka registrations
         shell: bash
         run: |
@@ -240,16 +282,53 @@ jobs:
           customer_password="CiSmoke-$(openssl rand -hex 16)"
           printf '::add-mask::%s\n' "$customer_password"
 
+          call_with_retry() {
+            local response_file="$1"
+            local max_time="$2"
+            shift 2
+
+            local retries=0
+            local status="000"
+            local curl_exit=0
+
+            while true; do
+              status="000"
+              if status="$(curl -sS --max-time "$max_time" -o "$response_file" -w '%{http_code}' "$@" 2>/dev/null)"; then
+                curl_exit=0
+              else
+                curl_exit=$?
+              fi
+
+              if [[ "$curl_exit" -eq 0 && ! "$status" =~ ^(502|503|504)$ ]]; then
+                printf '%s' "$status"
+                return 0
+              fi
+              if [[ "$curl_exit" -ne 0 && "$curl_exit" -ne 7 ]]; then
+                printf '%s' "$status"
+                return 0
+              fi
+
+              if (( retries >= 18 )); then
+                printf '%s' "$status"
+                return 0
+              fi
+
+              retries=$((retries + 1))
+              if [[ "$curl_exit" -ne 0 ]]; then
+                echo "Retry $retries/18: HTTP ${status:-000}; connection failed." >&2
+              else
+                echo "Retry $retries/18: HTTP $status; gateway not ready." >&2
+              fi
+              sleep 10
+            done
+          }
+
           jq -n --arg fullName 'CI Smoke Customer' --arg email "$email" --arg password "$customer_password" \
             '{fullName:$fullName,email:$email,password:$password,role:"CUSTOMER"}' > "$RUNNER_TEMP/register-customer.json"
-          if ! register_status="$(curl --fail --silent --show-error --max-time 30 \
-            -o "$RUNNER_TEMP/register-response.json" -w '%{http_code}' \
+          register_status="$(call_with_retry "$RUNNER_TEMP/register-response.json" 30 \
             -H 'Content-Type: application/json' \
             --data-binary "@$RUNNER_TEMP/register-customer.json" \
-            http://localhost:8080/api/auth/register)"; then
-            echo "::error::Customer registration request failed."
-            exit 1
-          fi
+            http://localhost:8080/api/auth/register)"
           if [[ "$register_status" != '201' ]]; then
             echo "::error::Customer registration returned HTTP $register_status; expected 201."
             exit 1
@@ -257,14 +336,10 @@ jobs:
 
           jq -n --arg email "$email" --arg password "$customer_password" \
             '{email:$email,password:$password}' > "$RUNNER_TEMP/login-customer.json"
-          if ! login_status="$(curl --fail --silent --show-error --max-time 30 \
-            -o "$RUNNER_TEMP/login-response.json" -w '%{http_code}' \
+          login_status="$(call_with_retry "$RUNNER_TEMP/login-response.json" 30 \
             -H 'Content-Type: application/json' \
             --data-binary "@$RUNNER_TEMP/login-customer.json" \
-            http://localhost:8080/api/auth/login)"; then
-            echo "::error::Customer login request failed."
-            exit 1
-          fi
+            http://localhost:8080/api/auth/login)"
           if [[ "$login_status" != '200' ]]; then
             echo "::error::Customer login returned HTTP $login_status; expected 200."
             exit 1
@@ -279,15 +354,11 @@ jobs:
           jq -n --arg title "$title" \
             --arg description 'CI smoke test: payment checkout is failing for this customer.' \
             '{title:$title,description:$description}' > "$RUNNER_TEMP/create-ticket.json"
-          if ! ticket_status="$(curl --fail --silent --show-error --max-time 60 \
-            -o "$RUNNER_TEMP/ticket-response.json" -w '%{http_code}' \
+          ticket_status="$(call_with_retry "$RUNNER_TEMP/ticket-response.json" 60 \
             -H "Authorization: Bearer $token" \
             -H 'Content-Type: application/json' \
             --data-binary "@$RUNNER_TEMP/create-ticket.json" \
-            http://localhost:8080/api/tickets)"; then
-            echo "::error::Ticket creation request failed."
-            exit 1
-          fi
+            http://localhost:8080/api/tickets)"
           if [[ "$ticket_status" != '201' ]]; then
             echo "::error::Ticket creation returned HTTP $ticket_status; expected 201."
             exit 1
