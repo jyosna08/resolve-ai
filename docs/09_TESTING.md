@@ -69,8 +69,17 @@ Verified against the Docker Compose stack:
 
 ### Pending
 
-- Deployment on AWS/Vercel.
 - Load/performance testing.
+- Running the Newman Health and Auth folders against production.
+
+### Production deployment verified on 2026-11-20
+
+- Vercel frontend at `https://resolve-ai-ecru.vercel.app` and API at `https://resolveai-jyosna.duckdns.org`; the API health endpoint returned `{"status":"UP"}` over HTTPS through Caddy.
+- Production flow completed: bootstrap administrator login, Billing agent creation in the Team page, customer ticket submission with AI triage, agent reply, and customer reply visibility.
+- CORS from the Vercel origin and automatic Caddy certificate issuance were verified.
+- Backend deployed on AWS EC2 in `ap-southeast-2` (Sydney), `m7i-flex.large`, Ubuntu 26.04 LTS, 30 GB `gp3`, with an Elastic IP. Seven public Docker Hub `resolveai-*` images are published by CI on pushes to `main`.
+
+The bootstrap script did not initially accept Ubuntu 26.04, so this host was provisioned manually.
 
 ## 6. Known limitations and risks
 
@@ -92,4 +101,6 @@ Verified against the Docker Compose stack:
 | Public registration allowed AGENT/ADMIN role requests | Public registration now creates customers only; privileged registration requests are forbidden. |
 | Method security returned 500 instead of 403 | Security exception handling now returns the expected forbidden response. |
 | Frontend container health check failed with IPv6 localhost | Health check now uses the container's IPv4 loopback address. |
+| Compose smoke test raced API Gateway service discovery and returned 503 | CI now waits for healthy containers and retries gateway calls for transient routing failures. |
+| Caddy health check failed because Alpine `localhost` resolved to IPv6 | Production health check now targets `127.0.0.1`. |
 | Fast double click submitted duplicate tickets | Added a submit guard to prevent a second in-flight submission. |

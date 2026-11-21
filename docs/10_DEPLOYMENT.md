@@ -12,8 +12,8 @@
 
 ```env
 POSTGRES_USER=resolveai
-POSTGRES_PASSWORD=resolveai_secret
-JWT_SECRET=ResolveAISuperSecretSigningKeyForJWT2026MustBeLong
+POSTGRES_PASSWORD=replace_with_a_strong_password
+JWT_SECRET=replace_with_at_least_32_random_characters
 GEMINI_API_KEY=your_google_gemini_api_key
 RABBITMQ_ENABLED=true
 RABBITMQ_USER=guest
@@ -32,7 +32,7 @@ VITE_API_BASE_URL=http://localhost:8080
 
 ## 4. Cloud Deployment Target (Phase 14)
 
-- **Target:** AWS EC2 (Ubuntu 24.04 `t3.medium` with Elastic IP) or Azure Container Apps.
+- **Target:** AWS EC2 with an Elastic IP, or Azure Container Apps. The verified deployment uses Ubuntu 26.04 on an `m7i-flex.large` EC2 instance.
 - **Execution:** Pull tagged images from Docker Hub, configure production `.env`, run `docker compose -f docker/docker-compose.yml up -d`, and verify `/actuator/health` endpoints.
 
 ## 5. Docker Compose Runtime Details
@@ -80,7 +80,7 @@ The frontend is a static Vite build on Vercel. The EC2 server runs PostgreSQL, R
 
 ### EC2 setup
 
-Create an EC2 instance with Ubuntu 24.04 LTS, `m7i-flex.large` (2 vCPU and 8 GiB RAM), and a 30 GB `gp3` EBS volume. For AWS accounts created on or after July 15, 2025, AWS lists `m7i-flex.large` as Free tier eligible; account age and region can affect eligibility. Confirm that the AMI and instance type show **Free tier eligible** in the launch wizard. If the type is unavailable or not marked eligible in the selected region, choose another region and check again. AWS lists `t3.large` as ineligible for this Free plan. See the [m7i-flex instance specifications](https://docs.aws.amazon.com/ec2/latest/instancetypes/gp.html) and [AWS EC2 Free Tier eligibility](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-free-tier-usage.html).
+Create an EC2 instance with Ubuntu 24.04 or 26.04 LTS (26.04 was used in the verified deployment), `m7i-flex.large` (2 vCPU and 8 GiB RAM), and a 30 GB `gp3` EBS volume. For AWS accounts created on or after July 15, 2025, AWS lists `m7i-flex.large` as Free plan eligible; account age and region can affect eligibility. Confirm that the AMI and instance type show **Free tier eligible** in the launch wizard. If the type is unavailable or not marked eligible in the selected region, choose another region and check again. See the [m7i-flex instance specifications](https://docs.aws.amazon.com/ec2/latest/instancetypes/gp.html) and [AWS EC2 Free Tier eligibility](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-free-tier-usage.html).
 
 Use this security group:
 
@@ -175,3 +175,22 @@ Deploy the frontend and note its final production origin, for example `https://<
 | 502 from Caddy | Check that API Gateway is healthy and services registered with Eureka: `docker compose --env-file docker/.env -f docker/docker-compose.prod.yml ps` and `logs -f api-gateway`. |
 | Service keeps restarting | Inspect its logs and `docker stats`; confirm memory and swap availability. |
 | Image not found | Confirm `DOCKER_USERNAME` and `IMAGE_TAG` match CI-published images. For a private Docker Hub repository, authenticate with `docker login` on the EC2 host before deploy. |
+
+### Verified deployment (2026-11-20)
+
+- Frontend: <https://resolve-ai-ecru.vercel.app>, deployed on Vercel with the project root set to `frontend` and `VITE_API_BASE_URL` set to the API domain.
+- API: <https://resolveai-jyosna.duckdns.org>, served through Caddy over HTTPS to the API Gateway. `GET /actuator/health` returned `{"status":"UP"}` and Caddy issued its certificate automatically.
+- Backend host: AWS EC2 in `ap-southeast-2` (Sydney), `m7i-flex.large` with 8 GB RAM, Ubuntu 26.04 LTS, 30 GB `gp3`, and an Elastic IP. The security group allowed SSH only from the operator's IP and HTTP/HTTPS from anywhere.
+- Images: seven public `resolveai-*` images in Docker Hub namespace `jyosnavuttla`; CI publishes images on pushes to `main`.
+- End-to-end flow: bootstrap administrator login, create a Billing agent on the Team page, submit a customer ticket and receive AI triage, send an agent reply, and confirm the customer can see the reply. The Vercel origin passed the CORS check.
+
+The bootstrap script initially rejected Ubuntu 26.04, so the host was provisioned manually. The production Caddy health check uses `127.0.0.1`: `localhost` resolved to IPv6 in the Alpine container and caused connection refusals.
+
+### Operations runbook
+
+- **Start:** Start the EC2 instance in the AWS console and allow about five minutes for containers to restart and services to become ready. If services remain unhealthy, SSH to the host and run `bash scripts/deploy.sh --no-pull` from the repository.
+- **Stop:** Stop the instance when the demo is not needed; do not terminate it. Persistent disk data remains on the EBS volume.
+- **Costs:** EBS storage and the public IPv4 address can continue to incur charges while stopped. Free plan credits are consumed while the instance runs.
+- **SSH keepalive:** Add `ServerAliveInterval 30` to the relevant host entry in `~/.ssh/config` to keep SSH sessions active.
+- **SSH access:** Update the security group's SSH source rule when the laptop's public IP changes.
+- **Lessons:** Check Free plan instance eligibility in the launch wizard; scripts must account for supported OS versions; wait for service discovery before smoke requests; avoid entering secrets more than once; use `127.0.0.1` instead of `localhost` in Alpine container health checks.

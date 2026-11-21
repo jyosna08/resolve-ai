@@ -2,6 +2,13 @@
 
 **AI-assisted customer support ticketing with role-aware workflows, automatic assignment, and human-verified replies.**
 
+## Live demo
+
+- Frontend: [https://resolve-ai-ecru.vercel.app](https://resolve-ai-ecru.vercel.app)
+- API health: [https://resolveai-jyosna.duckdns.org/actuator/health](https://resolveai-jyosna.duckdns.org/actuator/health)
+
+The backend may be stopped when it is not being demonstrated to conserve AWS Free plan credits. If the frontend reports a connection error, the backend may be stopped; start the EC2 instance and allow a few minutes for the services to recover.
+
 ## The problem
 
 Support teams spend time sorting incoming requests, finding the right agent, and writing first responses. ResolveAI triages ticket text, recommends an assignment, highlights critical issues, and prepares a draft reply while leaving final responses under agent control.
@@ -142,7 +149,7 @@ GitHub Actions tests all six backend modules and the frontend, builds seven cont
 
 ## Deployment overview
 
-The documented deployment approach serves the frontend from Vercel and runs the backend Compose stack on AWS EC2. Review prerequisites, configuration, and deployment steps in [docs/10_DEPLOYMENT.md](docs/10_DEPLOYMENT.md). Deployment has not been verified for this release.
+The verified deployment serves the frontend from Vercel and runs the backend Compose stack on an AWS EC2 `m7i-flex.large` instance, with Caddy providing HTTPS and Docker Hub supplying the service images. See [docs/10_DEPLOYMENT.md](docs/10_DEPLOYMENT.md) for configuration, operations, and deployment details.
 
 ## Roles and access
 
@@ -172,7 +179,7 @@ The project used an architect-style prompt workflow with TrainingMug ADF, one mo
 
 ## Screenshots
 
-Add screenshots under `docs/screenshots/`:
+Screenshots can be added under `docs/screenshots/` when available:
 
 - [ ] Login
 - [ ] Customer portal
