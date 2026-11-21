@@ -6,7 +6,7 @@ Prompts followed an architect-style plan: read the project contract and coding s
 
 ## Prompt log
 
-The table records scope and outcome without reproducing full prompt text. Test totals are stated only where supplied as part of that work's recorded outcome.
+The table records scope and outcome without reproducing full prompt text. It contains 20 entries. Test totals are stated only where supplied as part of that work's recorded outcome.
 
 | # | Scope | Branch | Outcome |
 | --- | --- | --- | --- |
@@ -26,6 +26,10 @@ The table records scope and outcome without reproducing full prompt text. Test t
 | 11A | Secure registration backend | `feature/secure-registration` | Public registration is customer-only; administrator manages team roles |
 | 11B | Team page, customer-only registration UI, and duplicate-submit guard | `feature/secure-registration-ui` | Team user creation UI and safer issue submission |
 | 12 | Postman, test report, README, and prompt log | `feature/final-docs` | API collection, verified test counts, setup documentation, and reusable prompt guidance |
+| 12B | Postman sandbox reserved-name and script robustness fix | `feature/postman-fix` | Renamed reserved sandbox variables and made response parsing and missing-variable assertions safer |
+| 13 | Production deployment files | `feature/production-deploy` | Production Compose configuration, deployment scripts, and AWS/Vercel deployment setup |
+| 13B | CI Compose smoke startup race | `feature/ci-smoke-fix` | Wait for healthy services and retry transient gateway routing failures |
+| 14 | Deployed documentation, bootstrap OS support, and health check fix | `feature/deployed-docs` | Recorded verified deployment, added operations guidance, expanded Ubuntu support, and documented the IPv4 loopback health check |
 
 ## Lessons learned
 
@@ -37,6 +41,10 @@ The table records scope and outcome without reproducing full prompt text. Test t
 - Keep credentials and tokens out of git.
 - Check real runtime behavior in Docker in addition to unit tests.
 - Small, scoped prompts are easier to complete under quota limits.
+- AWS Free plan eligibility can restrict which instance types are available.
+- Wait for service discovery before sending smoke requests through the gateway.
+- Check the operating system assumptions in setup scripts against the actual host image.
+- Use `127.0.0.1` in container health checks when Alpine resolves `localhost` to IPv6.
 
 ## Reusable prompt template
 
