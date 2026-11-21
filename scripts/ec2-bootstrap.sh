@@ -2,17 +2,17 @@
 set -euo pipefail
 
 if [[ ! -r /etc/os-release ]]; then
-  echo "Cannot identify the operating system; this script requires Ubuntu 24.04." >&2
+  echo "Cannot identify the operating system; this script requires Ubuntu 24.04 or 26.04." >&2
   exit 1
 fi
 # shellcheck disable=SC1091
 source /etc/os-release
 if [[ "${ID:-}" != "ubuntu" ]]; then
-  echo "Unsupported operating system: ${PRETTY_NAME:-unknown}. Use Ubuntu 24.04." >&2
+  echo "Unsupported operating system: ${PRETTY_NAME:-unknown}. Use Ubuntu 24.04 or 26.04." >&2
   exit 1
 fi
-if [[ "${VERSION_ID:-}" != "24.04" ]]; then
-  echo "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Use Ubuntu 24.04." >&2
+if [[ "${VERSION_ID:-}" != "24.04" && "${VERSION_ID:-}" != "26.04" && "${ALLOW_UNTESTED_OS:-0}" != "1" ]]; then
+  echo "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Use Ubuntu 24.04 or 26.04, or set ALLOW_UNTESTED_OS=1 to continue on an untested Ubuntu release." >&2
   exit 1
 fi
 if [[ "$(id -u)" -eq 0 ]]; then
@@ -26,7 +26,16 @@ fi
 sudo -v
 
 sudo apt-get update
-sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 git curl jq
+compose_package=""
+if apt-cache show docker-compose-v2 2>/dev/null | grep -q '^Package: docker-compose-v2$'; then
+  compose_package="docker-compose-v2"
+elif apt-cache show docker-compose-plugin 2>/dev/null | grep -q '^Package: docker-compose-plugin$'; then
+  compose_package="docker-compose-plugin"
+else
+  echo "Neither docker-compose-v2 nor docker-compose-plugin is available from the configured apt repositories." >&2
+  exit 1
+fi
+sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io git curl jq "$compose_package"
 sudo systemctl enable --now docker
 sudo usermod -aG docker "$(id -un)"
 
